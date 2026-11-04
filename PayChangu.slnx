@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PayChangu.NET.Tests/PayChangu.NET.Tests.csproj" Id="66f0f3c0-ecaa-44f3-b60b-cdf7f8aa1972" />
+  <Project Path="PayChangu.NET/PayChangu.NET.csproj" />
+</Solution>
