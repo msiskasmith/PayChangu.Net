@@ -21,9 +21,10 @@
 
 		<!-- Repository Metadata -->
 		<RepositoryType>git</RepositoryType>
-		<RepositoryUrl>YOUR_GITHUB_REPOSITORY_URL</RepositoryUrl>
-		<PackageProjectUrl>YOUR_GITHUB_REPOSITORY_URL</PackageProjectUrl>
-
+		<RepositoryUrl>https://github.com/msiskasmith/PayChangu.NET</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/msiskasmith/PayChangu.NET</PackageProjectUrl>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		
 		<!-- Documentation -->
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -40,7 +41,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="README.md" Pack="true" PackagePath="\" />
 		<None Update="LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
