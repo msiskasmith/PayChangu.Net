@@ -25,4 +25,10 @@ public sealed class PayChanguOptions
     /// Defaults to <c>https://api.paychangu.com/</c>.
     /// </value>
     public string BaseUrl { get; set; } = "https://api.paychangu.com/";
+
+    /// <summary>
+    /// Gets or sets the webhook secret key used to validate
+    /// incoming PayChangu webhook signatures.
+    /// </summary>
+    public string? WebhookSecret { get; set; }
 }

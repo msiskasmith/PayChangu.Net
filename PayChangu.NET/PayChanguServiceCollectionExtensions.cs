@@ -80,6 +80,9 @@ public static class PayChanguServiceCollectionExtensions
 
         configureHttpClient?.Invoke(builder);
 
+        services.AddSingleton<IPayChanguWebhookService>(
+            _ => new PayChanguWebhookService(options.WebhookSecret));
+
         return services;
     }
 }

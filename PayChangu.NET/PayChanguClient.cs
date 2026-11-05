@@ -47,6 +47,31 @@ public interface IPayChanguClient
     Task<PaymentResponse> InitiatePaymentAsync(
         PaymentRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verifies the status of a PayChangu transaction using its transaction reference.
+    /// </summary>
+    /// <param name="transactionReference">
+    /// The merchant-generated transaction reference supplied when initiating the payment.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// The verification response containing the transaction status and details.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the transaction reference is null, empty or consists only of whitespace.
+    /// </exception>
+    /// <exception cref="PayChanguException">
+    /// Thrown when PayChangu returns an unsuccessful response or an invalid response payload.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is canceled.
+    /// </exception>
+    Task<PaymentVerificationResponse> VerifyTransactionAsync(
+        string transactionReference,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -125,6 +150,56 @@ internal sealed class PayChanguClient : IPayChanguClient
         {
             throw new PayChanguException(
                 "Unable to deserialize PayChangu response.",
+                ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<PaymentVerificationResponse> VerifyTransactionAsync(
+        string transactionReference,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(transactionReference))
+        {
+            throw new ArgumentException(
+                "Transaction reference is required.",
+                nameof(transactionReference));
+        }
+
+        var endpoint = $"verify-payment/{Uri.EscapeDataString(transactionReference)}";
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            endpoint);
+
+        using var response = await _httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PayChanguException(
+                $"PayChangu returned an error ({(int)response.StatusCode}): {content}",
+                response.StatusCode,
+                content);
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<PaymentVerificationResponse>(
+                content,
+                _jsonOptions);
+
+            return result ?? throw new PayChanguException(
+                "PayChangu returned an empty verification response.");
+        }
+        catch (JsonException ex)
+        {
+            throw new PayChanguException(
+                "Unable to deserialize PayChangu verification response.",
                 ex);
         }
     }

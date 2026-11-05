@@ -3,7 +3,6 @@ using PayChangu.NET.Exceptions;
 using PayChangu.NET.Models;
 using PayChangu.NET.Tests.Fakes;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace PayChangu.NET.Tests;
@@ -82,10 +81,11 @@ public sealed class PayChanguClientTests
         """;
 
         var handler = new FakeHttpMessageHandler(
+        (_, _) => Task.FromResult(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json)
-            });
+            }));
 
         var client = CreateClient(handler);
 
@@ -113,27 +113,28 @@ public sealed class PayChanguClientTests
     {
         // Arrange
         var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    """
-                    {
-                        "message": "Success",
-                        "status": "success",
+    (_, _) => Task.FromResult(
+        new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """
+                {
+                    "message": "Success",
+                    "status": "success",
+                    "data": {
+                        "event": "checkout.session:created",
+                        "checkout_url": "https://checkout.paychangu.com/123",
                         "data": {
-                            "event": "checkout.session:created",
-                            "checkout_url": "https://checkout.paychangu.com/123",
-                            "data": {
-                                "tx_ref": "test-transaction-001",
-                                "currency": "MWK",
-                                "amount": 5000,
-                                "mode": "test",
-                                "status": "pending"
-                            }
+                            "tx_ref": "test-transaction-001",
+                            "currency": "MWK",
+                            "amount": 5000,
+                            "mode": "test",
+                            "status": "pending"
                         }
                     }
-                    """)
-            });
+                }
+                """)
+        }));
 
         var client = CreateClient(handler);
 
@@ -217,5 +218,150 @@ public sealed class PayChanguClientTests
 
         // Assert
         Assert.Contains("Unable to deserialize", exception.Message);
+    }
+
+    [Fact]
+    public async Task VerifyTransactionAsync_ReturnsVerificationResponse()
+    {
+        const string transactionReference = "TXN-12345";
+
+        const string json = """
+    {
+        "status": "success",
+        "message": "Payment details retrieved successfully.",
+        "data": {
+            "event_type": "checkout.payment",
+            "tx_ref": "TXN-12345",
+            "mode": "live",
+            "type": "API Payment (Checkout)",
+            "status": "success",
+            "number_of_attempts": 1,
+            "reference": "26262633201",
+            "currency": "MWK",
+            "amount": 1000,
+            "charges": 40,
+            "customization": {
+                "title": "Test Payment",
+                "description": "Payment Description",
+                "logo": null
+            },
+            "meta": null,
+            "authorization": {
+                "channel": "Card",
+                "card_number": "230377******0408",
+                "expiry": "2035-12",
+                "brand": "MASTERCARD",
+                "provider": null,
+                "mobile_number": null,
+                "completed_at": "2024-08-08T23:21:22.000000Z"
+            },
+            "customer": {
+                "email": "customer@example.com",
+                "first_name": "John",
+                "last_name": "Banda"
+            },
+            "logs": [],
+            "created_at": "2024-08-08T23:20:21.000000Z",
+            "updated_at": "2024-08-08T23:20:21.000000Z"
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler
+        {
+            Response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            }
+        };
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyTransactionAsync(transactionReference);
+
+        Assert.NotNull(result);
+        Assert.Equal("success", result.Status);
+        Assert.Equal("TXN-12345", result.Data.TransactionReference);
+        Assert.Equal("success", result.Data.Status);
+        Assert.Equal(1000m, result.Data.Amount);
+        Assert.Equal("MWK", result.Data.Currency);
+        Assert.Equal("26262633201", result.Data.ProviderReference);
+        Assert.Equal("MASTERCARD", result.Data.Authorization!.Brand);
+    }
+
+    [Fact]
+    public async Task VerifyTransactionAsync_UsesCorrectEndpoint()
+    {
+        const string transactionReference = "TXN-12345";
+
+        var handler = new FakeHttpMessageHandler
+        {
+            Response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"success","message":"OK","data":{"status":"success"}}""")
+            }
+        };
+
+        var client = CreateClient(handler);
+
+        await client.VerifyTransactionAsync(transactionReference);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest!.Method);
+
+        Assert.Equal(
+            $"verify-payment/{transactionReference}",
+            handler.LastRequest.RequestUri!.PathAndQuery.TrimStart('/'));
+    }
+
+    [Fact]
+    public async Task VerifyTransactionAsync_WhenApiReturnsError_ThrowsPayChanguException()
+    {
+        var handler = new FakeHttpMessageHandler
+        {
+            Response = new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent("Transaction not found.")
+            }
+        };
+
+        var client = CreateClient(handler);
+
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.VerifyTransactionAsync("TXN-12345"));
+
+        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+        Assert.Equal("Transaction not found.", exception.ResponseContent);
+    }
+
+    [Fact]
+    public async Task VerifyTransactionAsync_WhenResponseIsInvalidJson_ThrowsPayChanguException()
+    {
+        var handler = new FakeHttpMessageHandler
+        {
+            Response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("invalid-json")
+            }
+        };
+
+        var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<PayChanguException>(
+            () => client.VerifyTransactionAsync("TXN-12345"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task VerifyTransactionAsync_WhenReferenceIsInvalid_ThrowsArgumentException(
+    string? transactionReference)
+    {
+        var handler = new FakeHttpMessageHandler();
+        var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => client.VerifyTransactionAsync(transactionReference!));
     }
 }
