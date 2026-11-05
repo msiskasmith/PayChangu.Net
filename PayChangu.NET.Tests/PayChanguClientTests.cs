@@ -3,6 +3,7 @@ using PayChangu.NET.Exceptions;
 using PayChangu.NET.Models;
 using PayChangu.NET.Tests.Fakes;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 
 namespace PayChangu.NET.Tests;
@@ -363,5 +364,250 @@ public sealed class PayChanguClientTests
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => client.VerifyTransactionAsync(transactionReference!));
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ReturnsResponse_WhenRequestSucceeds()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "status": "success",
+                    "message": "Payment request initiated successfully.",
+                    "data": {
+                        "amount": 5000,
+                        "charge_id": "charge-001",
+                        "ref_id": "ref-001",
+                        "trans_id": null,
+                        "first_name": "John",
+                        "last_name": "Banda",
+                        "email": "john@example.com",
+                        "status": "pending",
+                        "mobile": "+265991234567",
+                        "attempts": 1,
+                        "currency": "MWK",
+                        "mode": "test",
+                        "created_at": "2026-11-05T10:00:00Z",
+                        "completed_at": null,
+                        "mobile_money": {
+                            "name": "Airtel Money",
+                            "ref_id": "operator-001",
+                            "country": "Malawi"
+                        }
+                    }
+                }
+                """,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        var client = CreateClient(handler);
+
+        var request = new MobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001",
+            Email = "john@example.com",
+            FirstName = "John",
+            LastName = "Banda"
+        };
+
+        // Act
+        var result = await client.InitiateMobileMoneyChargeAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("success", result.Status);
+        Assert.Equal("Payment request initiated successfully.", result.Message);
+        Assert.Equal("charge-001", result.Data.ChargeId);
+        Assert.Equal("ref-001", result.Data.ReferenceId);
+        Assert.Equal("pending", result.Data.Status);
+        Assert.Equal(5000m, result.Data.Amount);
+        Assert.Equal("Airtel Money", result.Data.MobileMoney.Name);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_UsesCorrectEndpoint()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"success","message":"Request initiated","data":{}}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        var client = CreateClient(handler);
+
+        var request = new MobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001"
+        };
+
+        // Act
+        await client.InitiateMobileMoneyChargeAsync(request);
+
+        // Assert
+        Assert.Equal(HttpMethod.Post, handler.RequestMethod);
+        Assert.Equal(
+            new Uri("https://api.paychangu.com/mobile-money/payments/initialize"),
+            handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_SerializesRequestCorrectly()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"success","message":"Request initiated","data":{}}""")
+    
+            });
+
+        var client = CreateClient(handler);
+
+        var request = new MobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001",
+            Email = "john@example.com",
+            FirstName = "John",
+            LastName = "Banda"
+        };
+
+        // Act
+        await client.InitiateMobileMoneyChargeAsync(request);
+
+        // Assert
+        Assert.NotNull(handler.RequestContent);
+
+        using var document = JsonDocument.Parse(handler.RequestContent);
+        var root = document.RootElement;
+
+        Assert.Equal("+265991234567", root.GetProperty("mobile").GetString());
+        Assert.Equal("operator-001", root.GetProperty("mobile_money_operator_ref_id").GetString());
+        Assert.Equal("5000", root.GetProperty("amount").GetString());
+        Assert.Equal("charge-001", root.GetProperty("charge_id").GetString());
+        Assert.Equal("john@example.com", root.GetProperty("email").GetString());
+        Assert.Equal("John", root.GetProperty("first_name").GetString());
+        Assert.Equal("Banda", root.GetProperty("last_name").GetString());
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_UsesBearerAuthentication()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"success","message":"Request initiated","data":{}}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        var client = CreateClient(handler);
+
+        var request = new MobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001"
+        };
+
+        // Act
+        await client.InitiateMobileMoneyChargeAsync(request);
+
+        // Assert
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal("test-secret-key", handler.AuthorizationParameter);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ThrowsPayChanguException_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent = """{"message":"Invalid operator"}""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(errorContent)
+            });
+
+        var client = CreateClient(handler);
+
+        var request = new MobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "invalid-operator",
+            Amount = "5000",
+            ChargeId = "charge-001"
+        };
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.InitiateMobileMoneyChargeAsync(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
+        Assert.Equal(errorContent, exception.ResponseContent);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ThrowsPayChanguException_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("invalid-json")
+            });
+
+        var client = CreateClient(handler);
+
+        var request = new MobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001"
+        };
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.InitiateMobileMoneyChargeAsync(request));
+
+        // Assert
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<JsonException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ThrowsArgumentNullException_WhenRequestIsNull()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler();
+        var client = CreateClient(handler);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => client.InitiateMobileMoneyChargeAsync(null!));
     }
 }

@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -55,7 +56,7 @@ public sealed class PayChanguWebhookEvent
     /// Gets or sets the PayChangu charge identifier, when available.
     /// </summary>
     [JsonPropertyName("charge_id")]
-    public string? ChargeId { get; set; }
+    public string? ChargeId { private get; set; }
 
     /// <summary>
     /// Gets or sets the PayChangu transaction reference.
@@ -67,19 +68,40 @@ public sealed class PayChanguWebhookEvent
     /// Gets or sets the merchant transaction reference.
     /// </summary>
     [JsonPropertyName("tx_ref")]
-    public string TransactionReference { get; set; } = null!;
+    public string? TransactionReference { private get; set; }
+
+    /// <summary>
+    /// Gets the transaction identifier to use when verifying the payment.
+    /// Returns the merchant transaction reference for Standard Checkout
+    /// or the PayChangu charge identifier for Direct Charge.
+    /// </summary>
+    [JsonIgnore]
+    public string TransactionIdentifier =>
+    PaymentFlow switch
+    {
+        PayChanguPaymentFlow.Checkout =>
+            TransactionReference ?? throw new JsonException(
+                "The Checkout webhook is missing tx_ref."),
+
+        PayChanguPaymentFlow.DirectCharge =>
+            ChargeId ?? throw new JsonException(
+                "The Direct Charge webhook is missing charge_id."),
+
+        _ => throw new JsonException(
+            "The webhook payment flow could not be determined.")
+    };
 
     /// <summary>
     /// Gets or sets the customer details.
     /// </summary>
     [JsonPropertyName("customer")]
-    public PayChanguWebhookCustomer Customer { get; set; } = null!;
+    public PayChanguWebhookCustomer? Customer { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the transaction authorization details.
     /// </summary>
     [JsonPropertyName("authorization")]
-    public PayChanguTransactionSource Source { get; set; } = null!;
+    public PayChanguTransactionSource? Source { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the transaction creation date and time.
@@ -92,6 +114,48 @@ public sealed class PayChanguWebhookEvent
     /// </summary>
     [JsonPropertyName("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Gets the payment flow associated with this webhook event.
+    /// </summary>
+    [JsonIgnore]
+    public PayChanguPaymentFlow PaymentFlow =>
+        EventType switch
+        {
+            "checkout.payment" => PayChanguPaymentFlow.Checkout,
+            "api.charge.payment" => PayChanguPaymentFlow.DirectCharge,
+            _ => PayChanguPaymentFlow.Unknown
+        };
+
+    /// <summary>
+    /// Gets the payment method associated with this webhook event.
+    /// </summary>
+    [JsonIgnore]
+    public PayChanguPaymentMethod PaymentMethod
+    {
+        get
+        {
+            if (Source == null)
+                return PayChanguPaymentMethod.Unknown;
+
+            if (Source.MobileMoney != null)
+                return PayChanguPaymentMethod.MobileMoney;
+
+            if (Source.BankPayment != null)
+                return PayChanguPaymentMethod.BankTransfer;
+
+            if (Source.Card != null)
+                return PayChanguPaymentMethod.Card;
+
+            return Source.Channel switch
+            {
+                "Mobile Money" => PayChanguPaymentMethod.MobileMoney,
+                "Mobile Bank Transfer" => PayChanguPaymentMethod.BankTransfer,
+                "Card" => PayChanguPaymentMethod.Card,
+                _ => PayChanguPaymentMethod.Unknown
+            };
+        }
+    }
 }
 
 /// <summary>
@@ -242,4 +306,51 @@ public sealed class PayChanguWebhookCustomer
     /// </summary>
     [JsonPropertyName("merchant_reference_identifier")]
     public string? MerchantReferenceIdentifier { get; set; }
+}
+
+/// <summary>
+/// Represents the payment flow used to process a PayChangu transaction.
+/// </summary>
+public enum PayChanguPaymentFlow
+{
+    /// <summary>
+    /// The payment flow could not be determined.
+    /// </summary>
+    Unknown,
+
+    /// <summary>
+    /// The payment was initiated through PayChangu Standard Checkout.
+    /// </summary>
+    Checkout,
+
+    /// <summary>
+    /// The payment was initiated directly through a PayChangu payment endpoint.
+    /// </summary>
+    DirectCharge
+}
+
+/// <summary>
+/// Represents the payment method used for a PayChangu transaction.
+/// </summary>
+public enum PayChanguPaymentMethod
+{
+    /// <summary>
+    /// The payment method could not be determined.
+    /// </summary>
+    Unknown,
+
+    /// <summary>
+    /// The payment was made using a mobile money service.
+    /// </summary>
+    MobileMoney,
+
+    /// <summary>
+    /// The payment was made using a bank transfer.
+    /// </summary>
+    BankTransfer,
+
+    /// <summary>
+    /// The payment was made using a payment card.
+    /// </summary>
+    Card
 }

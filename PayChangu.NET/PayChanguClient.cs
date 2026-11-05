@@ -69,8 +69,25 @@ public interface IPayChanguClient
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled.
     /// </exception>
-    Task<PaymentVerificationResponse> VerifyTransactionAsync(
+    Task<CheckoutPaymentVerificationResponse> VerifyTransactionAsync(
         string transactionReference,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Initiates a direct mobile money payment request.
+    /// </summary>
+    /// <param name="request">
+    /// The mobile money charge details.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the HTTP request.
+    /// </param>
+    /// <returns>
+    /// The response indicating whether PayChangu accepted the charge request
+    /// and initiated the payment process. It does not confirm payment completion.
+    /// </returns>
+    Task<MobileMoneyChargeResponse> InitiateMobileMoneyChargeAsync(
+        MobileMoneyDirectChargeRequest request,
         CancellationToken cancellationToken = default);
 }
 
@@ -155,7 +172,7 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<PaymentVerificationResponse> VerifyTransactionAsync(
+    public async Task<CheckoutPaymentVerificationResponse> VerifyTransactionAsync(
         string transactionReference,
         CancellationToken cancellationToken = default)
     {
@@ -189,7 +206,7 @@ internal sealed class PayChanguClient : IPayChanguClient
 
         try
         {
-            var result = JsonSerializer.Deserialize<PaymentVerificationResponse>(
+            var result = JsonSerializer.Deserialize<CheckoutPaymentVerificationResponse>(
                 content,
                 _jsonOptions);
 
@@ -200,6 +217,52 @@ internal sealed class PayChanguClient : IPayChanguClient
         {
             throw new PayChanguException(
                 "Unable to deserialize PayChangu verification response.",
+                ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<MobileMoneyChargeResponse> InitiateMobileMoneyChargeAsync(
+        MobileMoneyDirectChargeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        var json = JsonSerializer.Serialize(request);
+
+        using var content = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json");
+
+        using var response = await _httpClient.PostAsync(
+            "mobile-money/payments/initialize",
+            content,
+            cancellationToken);
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PayChanguException(
+                "Failed to initiate mobile money charge.",
+                response.StatusCode,
+                responseContent);
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<MobileMoneyChargeResponse>(
+                responseContent);
+
+            return result ?? throw new PayChanguException(
+                "PayChangu returned an empty mobile money charge response.");
+        }
+        catch (JsonException ex)
+        {
+            throw new PayChanguException(
+                "Failed to deserialize the mobile money charge response.",
                 ex);
         }
     }
