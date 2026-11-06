@@ -5,7 +5,7 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents a request to initiate a direct mobile money payment.
 /// </summary>
-public sealed class MobileMoneyDirectChargeRequest
+public sealed class InitiateMobileMoneyDirectChargeRequest
 {
     /// <summary>
     /// Gets or sets the customer's mobile phone number.

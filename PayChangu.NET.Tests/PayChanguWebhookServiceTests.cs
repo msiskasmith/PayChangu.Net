@@ -210,20 +210,20 @@ public sealed class PayChanguWebhookServiceTests
 
         Assert.Equal(
             "test-transaction-001",
-            result.TransactionReference);
+            result.TransactionIdentifier);
 
         Assert.Equal(
             "provider-reference-123",
             result.Reference);
 
-        Assert.Equal("customer@example.com", result.Customer.Email);
-        Assert.Equal("John", result.Customer.FirstName);
+        Assert.Equal("customer@example.com", result.Customer?.Email);
+        Assert.Equal("John", result.Customer?.FirstName);
 
-        Assert.Equal("Mobile Money", result.Source.Channel);
-        Assert.Equal("Airtel", result.Source.MobileMoney!.Operator);
+        Assert.Equal("Mobile Money", result.Source?.Channel);
+        Assert.Equal("Airtel", result.Source?.MobileMoney?.Operator);
         Assert.Equal(
             "+265991234567",
-            result.Source.MobileMoney.MobileNumber);
+            result.Source?.MobileMoney?.MobileNumber);
     }
 
     [Fact]

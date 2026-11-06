@@ -4,7 +4,7 @@ internal sealed class PayChanguApiEndpoints
 {
     internal sealed class Account
     {
-        internal const string GetBalance = "wallet-balance?currency={Iso}";
+        internal const string GetBalance = "wallet-balance?currency={iso}";
     }
 
     internal sealed class HostedCheckout
@@ -13,17 +13,17 @@ internal sealed class PayChanguApiEndpoints
         internal const string VerifyTransactionStatus = "verify-payment/{ref}";
     }
 
-    internal sealed class DirectChargeMomo
+    internal sealed class MobileMoneyDirectCharge
     {
         internal const string GetMobileMoneyOperators = "mobile-money";
-        internal const string ChargeMobileMoney = "mobile-money/payments/initialize";
+        internal const string InitiateMobileMoneyDirectCharge = "mobile-money/payments/initialize";
         internal const string VerifyDirectChargeStatus = "mobile-money/payments/{id}/verify";
         internal const string GetSingleChargeDetails = "mobile-money/payments/{id}/details";
     }
 
-    internal sealed class DirectChargeBankTransfer
+    internal sealed class BankTransferDirectCharge
     {
-        internal const string ChargeBankTransfer = "direct-charge/payments/initialize";
+        internal const string InitiateBankTransferDirectCharge = "direct-charge/payments/initialize";
         internal const string GetSingleChargeDetails = "direct-charge/transactions/{id}/details";
     }
 
@@ -38,7 +38,7 @@ internal sealed class PayChanguApiEndpoints
     {
         internal const string GetOperators = "mobile-money/";
         internal const string MobileMoneyPayout = "mobile-money/payouts/initialize";
-        internal const string GetSingleMomoPayoutDetails = "mobile-money/payments/{id}/details";
+        internal const string GetSingleMobileMoneyPayoutDetails = "mobile-money/payments/{id}/details";
 
         internal const string GetBanks = "direct-charge/payouts/supported-banks?currency={Iso}";
         internal const string BankPayout = "direct-charge/payouts/initialize";

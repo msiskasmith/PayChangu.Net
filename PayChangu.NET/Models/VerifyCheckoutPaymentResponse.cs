@@ -9,7 +9,7 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents the response returned when verifying a PayChangu transaction.
 /// </summary>
-internal sealed class CheckoutPaymentVerificationResponse
+internal sealed class VerifyCheckoutPaymentResponse
 {
     /// <summary>
     /// Gets or sets the status of the API response.
@@ -27,7 +27,7 @@ internal sealed class CheckoutPaymentVerificationResponse
     /// Gets or sets the verified transaction details.
     /// </summary>
     [JsonPropertyName("data")]
-    internal CheckoutPaymentVerificationData Data { get; set; } = null!;
+    public CheckoutPaymentVerificationData Data { get; set; } = null!;
 }
 
 /// <summary>
@@ -101,7 +101,7 @@ internal sealed class CheckoutPaymentVerificationData
     /// with the transaction.
     /// </summary>
     [JsonPropertyName("customization")]
-    internal CheckoutPaymentVerificationCustomization? Customization { get; set; }
+    public CheckoutPaymentVerificationCustomization? Customization { get; set; }
 
     /// <summary>
     /// Gets or sets additional metadata associated with the transaction.
@@ -115,19 +115,19 @@ internal sealed class CheckoutPaymentVerificationData
     /// Gets or sets the payment authorization details.
     /// </summary>
     [JsonPropertyName("authorization")]
-    internal CheckoutPaymentAuthorization? Authorization { get; set; }
+    public CheckoutPaymentAuthorization? Authorization { get; set; }
 
     /// <summary>
     /// Gets or sets the customer information associated with the transaction.
     /// </summary>
     [JsonPropertyName("customer")]
-    internal CheckoutPaymentCustomer? Customer { get; set; }
+    public CheckoutPaymentCustomer? Customer { get; set; }
 
     /// <summary>
     /// Gets or sets the activity logs associated with the transaction.
     /// </summary>
     [JsonPropertyName("logs")]
-    internal List<CheckoutPaymentLog> Logs { get; set; } = new();
+    public List<CheckoutPaymentLog> Logs { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the date and time when the transaction was created.

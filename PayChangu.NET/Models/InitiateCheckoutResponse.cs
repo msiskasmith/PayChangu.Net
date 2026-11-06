@@ -5,7 +5,7 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents the response returned by PayChangu after initiating a payment.
 /// </summary>
-public sealed class PaymentResponse
+public sealed class InitiateCheckoutResponse
 {
     /// <summary>
     /// Gets or sets the response message returned by PayChangu.

@@ -9,7 +9,7 @@ namespace PayChangu.NET.Models;
 /// The request contains the transaction details, customer information,
 /// callback and return URLs, and optional metadata.
 /// </remarks>
-public sealed class PaymentRequest
+public sealed class InitiateCheckoutRequest
 {
     /// <summary>
     /// Gets or sets the amount to be charged to the customer.

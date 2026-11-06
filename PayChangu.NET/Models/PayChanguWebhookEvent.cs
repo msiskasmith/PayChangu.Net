@@ -31,6 +31,7 @@ public sealed class PayChanguWebhookEvent
     /// <summary>
     /// Gets or sets the transaction charge.
     /// </summary>
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     [JsonPropertyName("charge")]
     public decimal Charge { get; set; }
 
@@ -83,13 +84,31 @@ public sealed class PayChanguWebhookEvent
             TransactionReference ?? throw new JsonException(
                 "The Checkout webhook is missing tx_ref."),
 
-        PayChanguPaymentFlow.DirectCharge =>
+        PayChanguPaymentFlow.DirectCharge or PayChanguPaymentFlow.Payout =>
             ChargeId ?? throw new JsonException(
-                "The Direct Charge webhook is missing charge_id."),
+                "The webhook is missing charge_id."),
 
         _ => throw new JsonException(
             "The webhook payment flow could not be determined.")
     };
+
+    /// <summary>
+    /// Gets or sets the payee's first name, if provided.
+    /// </summary>
+    [JsonPropertyName("first_name")]
+    public string? PayeeFirstName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payee's last name, if provided.
+    /// </summary>
+    [JsonPropertyName("last_name")]
+    public string? PayeeLastName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payee's email address, if provided.
+    /// </summary>
+    [JsonPropertyName("email")]
+    public string? PayeeEmail { get; set; }
 
     /// <summary>
     /// Gets or sets the customer details.
@@ -102,6 +121,18 @@ public sealed class PayChanguWebhookEvent
     /// </summary>
     [JsonPropertyName("authorization")]
     public PayChanguTransactionSource? Source { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the recipient bank account details for a payout.
+    /// </summary>
+    [JsonPropertyName("recipient_account_details")]
+    public PayChanguRecipientAccountDetails? RecipientAccountDetails { get; set; }
+
+    /// <summary>
+    /// Gets or sets the mobile money operator details, if applicable.
+    /// </summary>
+    [JsonPropertyName("mobile_money")]
+    public MobileMoneyOperator? RecipientMobileMoneyOperator { get; set; }
 
     /// <summary>
     /// Gets or sets the transaction creation date and time.
@@ -120,12 +151,13 @@ public sealed class PayChanguWebhookEvent
     /// </summary>
     [JsonIgnore]
     public PayChanguPaymentFlow PaymentFlow =>
-        EventType switch
-        {
-            "checkout.payment" => PayChanguPaymentFlow.Checkout,
-            "api.charge.payment" => PayChanguPaymentFlow.DirectCharge,
-            _ => PayChanguPaymentFlow.Unknown
-        };
+    EventType switch
+    {
+        "checkout.payment" => PayChanguPaymentFlow.Checkout,
+        "api.charge.payment" => PayChanguPaymentFlow.DirectCharge,
+        "api.payout" => PayChanguPaymentFlow.Payout,
+        _ => PayChanguPaymentFlow.Unknown
+    };
 
     /// <summary>
     /// Gets the payment method associated with this webhook event.
@@ -135,6 +167,17 @@ public sealed class PayChanguWebhookEvent
     {
         get
         {
+            if (PaymentFlow == PayChanguPaymentFlow.Payout)
+            {
+                if (RecipientAccountDetails != null)
+                    return PayChanguPaymentMethod.BankTransfer;
+
+                if (RecipientMobileMoneyOperator != null)
+                    return PayChanguPaymentMethod.MobileMoney;
+
+                return PayChanguPaymentMethod.Unknown;
+            }
+
             if (Source == null)
                 return PayChanguPaymentMethod.Unknown;
 
@@ -326,7 +369,12 @@ public enum PayChanguPaymentFlow
     /// <summary>
     /// The payment was initiated directly through a PayChangu payment endpoint.
     /// </summary>
-    DirectCharge
+    DirectCharge,
+
+    /// <summary>
+    /// The transaction was initiated through a PayChangu payout endpoint.
+    /// </summary>
+    Payout
 }
 
 /// <summary>

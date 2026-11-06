@@ -44,4 +44,8 @@
 		<None Update="LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="PayChangu.NET.Tests" />
+	</ItemGroup>
+
 </Project>

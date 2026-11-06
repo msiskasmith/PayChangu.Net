@@ -27,6 +27,12 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
     /// <summary>
     /// Creates a handler that uses a response assigned through the Response property.
     /// </summary>
+    /// 
+    public CancellationToken ReceivedCancellationToken { get; private set; }
+
+    public TaskCompletionSource<bool> RequestReceived { get; } =
+    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public FakeHttpMessageHandler()
     {
     }
@@ -54,6 +60,9 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        ReceivedCancellationToken = cancellationToken;
+        RequestReceived.TrySetResult(true);
 
         LastRequest = request;
         RequestMethod = request.Method;

@@ -59,7 +59,7 @@ public sealed class PayChanguServiceCollectionExtensionsTests
 
         Assert.NotNull(client);
 
-        await client.InitiatePaymentAsync(new Models.PaymentRequest
+        await client.InitiatePaymentAsync(new Models.InitiateCheckoutRequest
         {
             Amount = 5000,
             Currency = "MWK",

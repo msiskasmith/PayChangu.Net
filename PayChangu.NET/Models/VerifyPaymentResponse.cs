@@ -28,7 +28,9 @@ public sealed class VerifyPaymentResponse
     public string TransactionIdentifier { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the merchant-generated transaction reference, when available.
+    /// Gets or sets the transaction reference.
+    /// This is the Checkout transaction reference or the Direct Charge reference identifier,
+    /// when available.
     /// </summary>
     public string? TransactionReference { get; set; }
 
@@ -65,7 +67,7 @@ public sealed class VerifyPaymentResponse
     /// <summary>
     /// Gets or sets the transaction type.
     /// </summary>
-    public string Type { get; set; } = null!;
+    public string? Type { get; set; }
 
     /// <summary>
     /// Gets or sets the final status of the transaction.
@@ -83,9 +85,9 @@ public sealed class VerifyPaymentResponse
     public string Message { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the total number of payment attempts.
+    /// Gets or sets the total number of payment attempts, when available.
     /// </summary>
-    public int Attempts { get; set; }
+    public int? Attempts { get; set; }
 
     /// <summary>
     /// Gets or sets the currency used for the transaction.
@@ -100,7 +102,7 @@ public sealed class VerifyPaymentResponse
     /// <summary>
     /// Gets or sets the charges applied to the transaction, when available.
     /// </summary>
-    public decimal? Charges { get; set; }
+    public PayChanguVerificationCharges? Charges { get; set; }
 
     /// <summary>
     /// Gets or sets the checkout customization information, when applicable.
@@ -147,6 +149,27 @@ public sealed class VerifyPaymentResponse
     /// Gets or sets the date and time when the transaction was last updated.
     /// </summary>
     public DateTimeOffset? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the original JSON response returned by PayChangu.
+    /// </summary>
+    public string? RawJsonResponse { get; set; }
+}
+
+/// <summary>
+/// Represents the charges applied to a verified PayChangu transaction.
+/// </summary>
+public sealed class PayChanguVerificationCharges
+{
+    /// <summary>
+    /// Gets or sets the currency in which the transaction charges are expressed.
+    /// </summary>
+    public string Currency { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the transaction charge amount.
+    /// </summary>
+    public decimal Amount { get; set; }
 }
 
 /// <summary>
@@ -209,6 +232,7 @@ public sealed class VerificationAuthorization
     /// </summary>
     public DateTimeOffset? CompletedAt { get; set; }
 }
+
 
 /// <summary>
 /// Represents the customer associated with a verified PayChangu transaction.
