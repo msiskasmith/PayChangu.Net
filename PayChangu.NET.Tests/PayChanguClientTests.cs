@@ -876,7 +876,14 @@ public sealed class PayChanguClientTests
     public async Task InitiateMobileMoneyChargeAsync_ReturnsFailure_WhenRequestFails()
     {
         // Arrange
-        const string errorContent = """{"message":"Invalid operator"}""";
+        const string errorContent = """
+            {
+              "status": "failed",
+              "message": "Session has expired for last transaction. Please try again",
+              "data": null
+            }
+            """;
+
 
         var handler = new FakeHttpMessageHandler(
             new HttpResponseMessage(HttpStatusCode.BadRequest)
@@ -906,6 +913,10 @@ public sealed class PayChanguClientTests
         Assert.Null(result.Result);
 
         Assert.Equal(errorContent, result.RawJsonResponse);
+
+        Assert.Equal(
+            "Session has expired for last transaction. Please try again",
+            result.ErrorMessage);
     }
 
     [Fact]

@@ -556,11 +556,16 @@ internal sealed class PayChanguClient : IPayChanguClient
         // Return unsuccessful HTTP responses as API response objects.
         if (!response.IsSuccessStatusCode)
         {
-            return CreateFailure<TResponse>(
-                response.StatusCode,
-                $"PayChangu returned an error during {operation} " +
-                $"({(int)response.StatusCode}): {content}",
-                content);
+            if (!response.IsSuccessStatusCode)
+            {
+                return CreateFailure<TResponse>(
+                    response.StatusCode,
+                    ExtractErrorMessage(
+                        content,
+                        operation,
+                        response.StatusCode),
+                    content);
+            }
         }
 
         // A successful HTTP status does not guarantee a valid response body.
@@ -598,6 +603,51 @@ internal sealed class PayChanguClient : IPayChanguClient
                 $"Unable to deserialize the PayChangu response during {operation}: {ex.Message}",
                 content);
         }
+    }
+
+    /// <summary>
+    /// Extracts the error message from a PayChangu API response.
+    /// </summary>
+    /// <param name="content">The raw response body.</param>
+    /// <param name="operation">A description of the API operation.</param>
+    /// <param name="statusCode">The HTTP status code returned by PayChangu.</param>
+    /// <returns>
+    /// The error message returned by PayChangu, or a fallback message
+    /// containing the HTTP status code and response body.
+    /// </returns>
+    private static string ExtractErrorMessage(
+        string content,
+        string operation,
+        HttpStatusCode statusCode)
+    {
+        if (!string.IsNullOrWhiteSpace(content))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(content);
+
+                if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                    document.RootElement.TryGetProperty(
+                        "message",
+                        out var messageElement) &&
+                    messageElement.ValueKind == JsonValueKind.String)
+                {
+                    var message = messageElement.GetString();
+
+                    if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        return message!;
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Fall back to the original response content.
+            }
+        }
+
+        return $"PayChangu returned an error during {operation} " +
+               $"({(int)statusCode}): {content}";
     }
 
     /// <summary>
