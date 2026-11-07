@@ -29,9 +29,9 @@ internal sealed class PayChanguApiEndpoints
 
     internal sealed class DirectChargeCard
     {
-        internal const string DirectChargeBank = "charge-card/payments";
-        internal const string VerifyDirectChargeStatus = "charge-card/verify/{id}";
-        internal const string RefundCardCharge = "charge-card/refund/{id}";
+        internal const string InitiateCharge = "charge-card/payments";
+        internal const string VerifyCharge = "charge-card/verify/{id}";
+        internal const string RefundCharge = "charge-card/refund/{id}";
     }
 
     internal sealed class Payout

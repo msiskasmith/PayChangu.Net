@@ -189,6 +189,31 @@ public interface IPayChanguClient
             CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Initiates a card charge through PayChangu.
+    /// </summary>
+    /// <param name="request">
+    /// The card charge details.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the HTTP request.
+    /// </param>
+    /// <returns>
+    /// A response indicating whether the card charge was initiated
+    /// and whether 3DS authentication is required.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is cancelled through the
+    /// <paramref name="cancellationToken"/>.
+    /// </exception>
+    Task<PayChanguApiResponse<InitiateCardChargeResponse>> InitiateCardChargeAsync(
+        InitiateCardChargeRequest request,
+        CancellationToken cancellationToken = default);
+
+
+    /// <summary>
     /// Retrieves the wallet balance for the specified currency.
     /// </summary>
     /// <param name="currency">
@@ -437,7 +462,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                 case PayChanguPaymentMethod.Card:
                     {
                         var endpoint = PayChanguApiEndpoints.DirectChargeCard
-                            .VerifyDirectChargeStatus
+                            .VerifyCharge
                             .Replace(
                                 "{id}",
                                 Uri.EscapeDataString(transactionIdentifier));
@@ -572,6 +597,34 @@ internal sealed class PayChanguClient : IPayChanguClient
         return await GetAsync<GetBankTransferDirectChargeDetailsResponse>(
             endpoint,
             "bank transfer direct charge details retrieval",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<InitiateCardChargeResponse>>
+        InitiateCardChargeAsync(
+            InitiateCardChargeRequest request,
+            CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            PayChanguApiEndpoints.DirectChargeCard.InitiateCharge);
+
+        httpRequest.Content = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json");
+
+        return await SendAsync<InitiateCardChargeResponse>(
+            httpRequest,
+            "Card Direct Charge initiation",
             cancellationToken);
     }
 

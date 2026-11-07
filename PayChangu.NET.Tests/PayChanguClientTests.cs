@@ -57,6 +57,22 @@ public sealed class PayChanguClientTests
         };
     }
 
+    private static InitiateCardChargeRequest CreateCardChargeRequest()
+    {
+        return new InitiateCardChargeRequest
+        {
+            CardNumber = "4111111111111111",
+            Expiry = "12/2030",
+            Cvv = "123",
+            CardholderName = "John Banda",
+            Amount = "5000",
+            Currency = "MWK",
+            ChargeId = "card-charge-001",
+            RedirectUrl = "https://example.com/redirect",
+            Email = "john@example.com"
+        };
+    }
+
     [Fact]
     public async Task InitiatePaymentAsync_ShouldReturnPaymentResponse_WhenSuccessful()
     {
@@ -2170,6 +2186,224 @@ public sealed class PayChanguClientTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => client.InitiateBankTransferDirectChargeAsync(null!));
+    }
+
+    [Fact]
+    public async Task InitiateCardChargeAsync_ReturnsResponse_WhenRequestSucceeds()
+    {
+        // Arrange
+        const string json = """
+    {
+        "success": true,
+        "requires_3ds_auth": true,
+        "orderReference": "00b1b3d0-1821-48ec-8136-4904ded5923b",
+        "3ds_auth_link": "https://in.paychangu.com/3ds/auth?reference=5984ae57-9920-4c30-abe5-82e07cb14234"
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.InitiateCardChargeAsync(
+            CreateCardChargeRequest());
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+
+        Assert.True(result.Result.Success);
+        Assert.True(result.Result.Requires3DSAuth);
+
+        Assert.Equal(
+            "00b1b3d0-1821-48ec-8136-4904ded5923b",
+            result.Result.OrderReference);
+
+        Assert.Equal(
+            "https://in.paychangu.com/3ds/auth?reference=5984ae57-9920-4c30-abe5-82e07cb14234",
+            result.Result.ThreeDSAuthLink);
+    }
+
+    [Fact]
+    public async Task InitiateCardChargeAsync_UsesCorrectEndpoint()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "success": true,
+                    "requires_3ds_auth": false,
+                    "orderReference": "order-001",
+                    "3ds_auth_link": null
+                }
+                """,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.InitiateCardChargeAsync(CreateCardChargeRequest());
+
+        // Assert
+        Assert.Equal(HttpMethod.Post, handler.RequestMethod);
+
+        Assert.Equal(
+            new Uri($"{BaseUrl}charge-card/payments"),
+            handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task InitiateCardChargeAsync_SerializesRequestCorrectly()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "success": true,
+                    "requires_3ds_auth": false,
+                    "orderReference": "order-001",
+                    "3ds_auth_link": null
+                }
+                """)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.InitiateCardChargeAsync(CreateCardChargeRequest());
+
+        // Assert
+        Assert.NotNull(handler.RequestContent);
+
+        using var document = JsonDocument.Parse(handler.RequestContent);
+        var root = document.RootElement;
+
+        Assert.Equal(
+            "4111111111111111",
+            root.GetProperty("card_number").GetString());
+
+        Assert.Equal("12/2030", root.GetProperty("expiry").GetString());
+        Assert.Equal("123", root.GetProperty("cvv").GetString());
+
+        Assert.Equal(
+            "John Banda",
+            root.GetProperty("cardholder_name").GetString());
+
+        Assert.Equal("5000", root.GetProperty("amount").GetString());
+        Assert.Equal("MWK", root.GetProperty("currency").GetString());
+        Assert.Equal("card-charge-001", root.GetProperty("charge_id").GetString());
+
+        Assert.Equal(
+            "https://example.com/redirect",
+            root.GetProperty("redirect_url").GetString());
+
+        Assert.Equal(
+            "john@example.com",
+            root.GetProperty("email").GetString());
+    }
+
+    [Fact]
+    public async Task InitiateCardChargeAsync_UsesBearerAuthentication()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "success": true,
+                    "requires_3ds_auth": false,
+                    "orderReference": "order-001",
+                    "3ds_auth_link": null
+                }
+                """)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.InitiateCardChargeAsync(CreateCardChargeRequest());
+
+        // Assert
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal(SecretKey, handler.AuthorizationParameter);
+    }
+
+    [Fact]
+    public async Task InitiateCardChargeAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent = """
+    {
+        "message": "Invalid card details",
+        "status": "failed"
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    errorContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.InitiateCardChargeAsync(
+            CreateCardChargeRequest());
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+        Assert.Equal("Invalid card details", result.ErrorMessage);
+
+        Assert.Null(result.Result);
+        Assert.Equal(errorContent, result.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task InitiateCardChargeAsync_ThrowsArgumentNullException_WhenRequestIsNull()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler();
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => client.InitiateCardChargeAsync(null!));
+
+        Assert.Null(handler.RequestUri);
     }
 
     [Fact]
