@@ -1,24 +1,13 @@
-﻿using System.Text.Json.Serialization;
+﻿using PayChangu.NET.Models.Base;
+using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
 
 /// <summary>
 /// Represents the response returned when initiating a Bank Transfer Direct Charge.
 /// </summary>
-public sealed class InitiateBankTransferDirectChargeResponse
+public sealed class InitiateBankTransferDirectChargeResponse : BasePaychanguResponse
 {
-    /// <summary>
-    /// Gets or sets the status of the API response.
-    /// </summary>
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the API response message.
-    /// </summary>
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = null!;
-
     /// <summary>
     /// Gets or sets the bank transfer charge details.
     /// </summary>

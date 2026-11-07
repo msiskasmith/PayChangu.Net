@@ -1,4 +1,5 @@
 ﻿
+using PayChangu.NET.Models.Base;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -9,20 +10,8 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents the response returned when verifying a PayChangu transaction.
 /// </summary>
-internal sealed class VerifyCheckoutPaymentResponse
+internal sealed class VerifyCheckoutPaymentResponse : BasePaychanguResponse
 {
-    /// <summary>
-    /// Gets or sets the status of the API response.
-    /// </summary>
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the message returned by the PayChangu API.
-    /// </summary>
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = null!;
-
     /// <summary>
     /// Gets or sets the verified transaction details.
     /// </summary>

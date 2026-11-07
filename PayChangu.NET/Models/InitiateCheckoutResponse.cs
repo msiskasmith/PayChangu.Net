@@ -1,26 +1,13 @@
-﻿using System.Text.Json.Serialization;
+﻿using PayChangu.NET.Models.Base;
+using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
 
 /// <summary>
 /// Represents the response returned by PayChangu after initiating a payment.
 /// </summary>
-public sealed class InitiateCheckoutResponse
+public sealed class InitiateCheckoutResponse : BasePaychanguResponse
 {
-    /// <summary>
-    /// Gets or sets the response message returned by PayChangu.
-    /// </summary>
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the response status.
-    /// </summary>
-    /// <remarks>
-    /// Typically indicates whether the payment initiation request was successful.
-    /// </remarks>
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the payment response data.

@@ -5,7 +5,6 @@ using PayChangu.NET.Tests.Fakes;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Xunit.Abstractions;
 
 namespace PayChangu.NET.Tests;
 
@@ -13,6 +12,25 @@ public sealed class PayChanguClientTests
 {
     private const string BaseUrl = "https://api.paychangu.com/";
     private const string SecretKey = "test-secret-key";
+
+    private static ServiceProvider CreateServiceProvider(
+    FakeHttpMessageHandler handler)
+    {
+        var services = new ServiceCollection();
+
+        services.AddPayChangu(
+            options =>
+            {
+                options.SecretKey = SecretKey;
+                options.BaseUrl = BaseUrl;
+            },
+            httpClient =>
+            {
+                httpClient.ConfigurePrimaryHttpMessageHandler(() => handler);
+            });
+
+        return services.BuildServiceProvider();
+    }
 
     private static InitiateCheckoutRequest CreatePaymentRequest()
     {
@@ -44,29 +62,29 @@ public sealed class PayChanguClientTests
     {
         // Arrange
         var json = """
-        {
-            "message": "Hosted payment session generated successfully.",
-            "status": "success",
+    {
+        "message": "Hosted payment session generated successfully.",
+        "status": "success",
+        "data": {
+            "event": "checkout.session:created",
+            "checkout_url": "https://checkout.paychangu.com/123456",
             "data": {
-                "event": "checkout.session:created",
-                "checkout_url": "https://checkout.paychangu.com/123456",
-                "data": {
-                    "tx_ref": "test-transaction-001",
-                    "currency": "MWK",
-                    "amount": 5000,
-                    "mode": "test",
-                    "status": "pending"
-                }
+                "tx_ref": "test-transaction-001",
+                "currency": "MWK",
+                "amount": 5000,
+                "mode": "test",
+                "status": "pending"
             }
         }
-        """;
+    }
+    """;
 
         var handler = new FakeHttpMessageHandler(
-        (_, _) => Task.FromResult(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json)
-            }));
+            (_, _) => Task.FromResult(
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(json)
+                }));
 
         using var serviceProvider = CreateServiceProvider(handler);
 
@@ -78,17 +96,252 @@ public sealed class PayChanguClientTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("success", result.Status);
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Hosted payment session generated successfully.",
+            result.Result.Message);
+
         Assert.Equal(
             "https://checkout.paychangu.com/123456",
-            result.Data.CheckoutUrl);
+            result.Result.Data.CheckoutUrl);
 
         Assert.Equal(
             "test-transaction-001",
-            result.Data.Session.TransactionReference);
+            result.Result.Data.Session.TransactionReference);
 
-        Assert.Equal(5000, result.Data.Session.Amount);
-        Assert.Equal("pending", result.Data.Session.Status);
+        Assert.Equal(5000, result.Result.Data.Session.Amount);
+        Assert.Equal("pending", result.Result.Data.Session.Status);
+    }
+
+    [Fact]
+    public async Task InitiatePaymentAsync_ShouldReturnFailureResponse_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent = """
+    {
+        "message": "Invalid API key",
+        "status": "error"
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent(errorContent)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.InitiatePaymentAsync(CreatePaymentRequest());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Equal(errorContent, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task InitiatePaymentAsync_ShouldReturnFailureResponse_WhenResponseIsInvalid()
+    {
+        // Arrange
+        const string invalidJson = "Invalid JSON";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(invalidJson)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.InitiatePaymentAsync(CreatePaymentRequest());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+        Assert.Equal(invalidJson, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_Checkout_ReturnsNormalizedResponseAndRawJson()
+    {
+        // Arrange
+        const string transactionReference = "TXN-12345";
+
+        const string json = """
+    {
+        "status": "success",
+        "message": "Payment details retrieved successfully.",
+        "data": {
+            "event_type": "checkout.payment",
+            "tx_ref": "TXN-12345",
+            "mode": "live",
+            "type": "API Payment (Checkout)",
+            "status": "success",
+            "number_of_attempts": 1,
+            "reference": "26262633201",
+            "currency": "MWK",
+            "amount": 1000,
+            "charges": 40,
+            "customization": {
+                "title": "Test Payment",
+                "description": "Payment Description",
+                "logo": null
+            },
+            "meta": null,
+            "authorization": {
+                "channel": "Card",
+                "card_number": "230377******0408",
+                "expiry": "2035-12",
+                "brand": "MASTERCARD",
+                "provider": null,
+                "mobile_number": null,
+                "completed_at": "2024-08-08T23:21:22.000000Z"
+            },
+            "customer": {
+                "email": "customer@example.com",
+                "first_name": "John",
+                "last_name": "Banda"
+            },
+            "logs": [],
+            "created_at": "2024-08-08T23:20:21.000000Z",
+            "updated_at": "2024-08-08T23:20:21.000000Z"
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            transactionReference,
+            PayChanguPaymentFlow.Checkout,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal(
+            PayChanguPaymentFlow.Checkout,
+            result.Result.PaymentFlow);
+
+        Assert.Equal(
+            PayChanguPaymentMethod.Card,
+            result.Result.PaymentMethod);
+
+        Assert.Equal(
+            transactionReference,
+            result.Result.TransactionIdentifier);
+
+        Assert.Equal(
+            transactionReference,
+            result.Result.TransactionReference);
+
+        Assert.Equal("26262633201", result.Result.ProviderReference);
+        Assert.Equal("checkout.payment", result.Result.EventType);
+
+        Assert.Equal("success", result.Result.ApiStatus);
+        Assert.Equal("success", result.Result.Status);
+
+        Assert.Equal(1, result.Result.Attempts);
+        Assert.Equal(1000m, result.Result.Amount);
+        Assert.Equal("MWK", result.Result.Currency);
+
+        Assert.NotNull(result.Result.Charges);
+        Assert.Equal("MWK", result.Result.Charges.Currency);
+        Assert.Equal(40m, result.Result.Charges.Amount);
+
+        Assert.Equal("MASTERCARD", result.Result.Authorization!.Brand);
+        Assert.Equal("customer@example.com", result.Result.Customer!.Email);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_ShouldReturnFailureResponse_WhenApiReturnsError()
+    {
+        // Arrange
+        const string errorContent = """{"message":"Transaction not found."}""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(errorContent)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            "TXN-12345",
+            PayChanguPaymentFlow.Checkout,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Equal(errorContent, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_ShouldReturnFailureResponse_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string invalidJson = "invalid-json";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(invalidJson)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            "TXN-12345",
+            PayChanguPaymentFlow.Checkout,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+        Assert.Equal(invalidJson, result.RawJsonResponse);
+        Assert.Null(result.Result);
     }
 
     [Fact]
@@ -157,146 +410,94 @@ public sealed class PayChanguClientTests
         Assert.True(root.TryGetProperty("return_url", out _));
     }
 
-    [Fact]
-    public async Task InitiatePaymentAsync_ShouldThrowPayChanguException_WhenRequestFails()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task VerifyPaymentAsync_WhenIdentifierIsInvalid_ThrowsArgumentException(
+        string? transactionIdentifier)
     {
         // Arrange
-        const string errorContent = """
-        {
-            "message": "Invalid API key",
-            "status": "error"
-        }
-        """;
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.Unauthorized)
-            {
-                Content = new StringContent(errorContent)
-            });
-
+        var handler = new FakeHttpMessageHandler();
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.InitiatePaymentAsync(CreatePaymentRequest()));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal(errorContent, exception.ResponseContent);
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => client.VerifyPaymentAsync(
+                transactionIdentifier!,
+                PayChanguPaymentFlow.Checkout,
+                PayChanguPaymentMethod.Card));
     }
 
     [Fact]
-    public async Task InitiatePaymentAsync_ShouldThrowPayChanguException_WhenResponseIsInvalid()
+    public async Task VerifyPaymentAsync_WhenPaymentFlowIsUnsupported_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("Invalid JSON")
-            });
-
+        var handler = new FakeHttpMessageHandler();
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.InitiatePaymentAsync(CreatePaymentRequest()));
-
-        // Assert
-        Assert.Contains("Unable to deserialize", exception.Message);
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => client.VerifyPaymentAsync(
+                "TXN-12345",
+                (PayChanguPaymentFlow)999,
+                PayChanguPaymentMethod.Card));
     }
 
     [Fact]
-    public async Task VerifyPaymentAsync_Checkout_ReturnsNormalizedResponseAndRawJson()
+    public async Task VerifyPaymentAsync_WhenPaymentMethodIsUnsupported_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        const string transactionReference = "TXN-12345";
-
-        const string json = """
-    {
-        "status": "success",
-        "message": "Payment details retrieved successfully.",
-        "data": {
-            "event_type": "checkout.payment",
-            "tx_ref": "TXN-12345",
-            "mode": "live",
-            "type": "API Payment (Checkout)",
-            "status": "success",
-            "number_of_attempts": 1,
-            "reference": "26262633201",
-            "currency": "MWK",
-            "amount": 1000,
-            "charges": 40,
-            "customization": {
-                "title": "Test Payment",
-                "description": "Payment Description",
-                "logo": null
-            },
-            "meta": null,
-            "authorization": {
-                "channel": "Card",
-                "card_number": "230377******0408",
-                "expiry": "2035-12",
-                "brand": "MASTERCARD",
-                "provider": null,
-                "mobile_number": null,
-                "completed_at": "2024-08-08T23:21:22.000000Z"
-            },
-            "customer": {
-                "email": "customer@example.com",
-                "first_name": "John",
-                "last_name": "Banda"
-            },
-            "logs": [],
-            "created_at": "2024-08-08T23:20:21.000000Z",
-            "updated_at": "2024-08-08T23:20:21.000000Z"
-        }
-    }
-    """;
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json)
-            });
-
+        var handler = new FakeHttpMessageHandler();
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => client.VerifyPaymentAsync(
+                "TXN-12345",
+                PayChanguPaymentFlow.Checkout,
+                (PayChanguPaymentMethod)999));
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_WhenCancellationIsRequested_CancelsHttpRequest()
+    {
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        var handler = new FakeHttpMessageHandler(
+            async (_, cancellationToken) =>
+            {
+                await Task.Delay(
+                    Timeout.Infinite,
+                    cancellationToken);
+
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
         // Act
-        var result = await client.VerifyPaymentAsync(
-            transactionReference,
+        var verificationTask = client.VerifyPaymentAsync(
+            "TXN-12345",
             PayChanguPaymentFlow.Checkout,
-            PayChanguPaymentMethod.Card);
+            PayChanguPaymentMethod.Card,
+            cancellationTokenSource.Token);
+
+        await handler.RequestReceived.Task;
+
+        await cancellationTokenSource.CancelAsync();
 
         // Assert
-        Assert.NotNull(result);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => verificationTask);
 
-        Assert.Equal(PayChanguPaymentFlow.Checkout, result.PaymentFlow);
-        Assert.Equal(PayChanguPaymentMethod.Card, result.PaymentMethod);
-
-        Assert.Equal(transactionReference, result.TransactionIdentifier);
-        Assert.Equal(transactionReference, result.TransactionReference);
-
-        Assert.Equal("26262633201", result.ProviderReference);
-        Assert.Equal("checkout.payment", result.EventType);
-
-        Assert.Equal("success", result.ApiStatus);
-        Assert.Equal("success", result.Status);
-
-        Assert.Equal(1, result.Attempts);
-        Assert.Equal(1000m, result.Amount);
-        Assert.Equal("MWK", result.Currency);
-
-        Assert.NotNull(result.Charges);
-        Assert.Equal("MWK", result.Charges.Currency);
-        Assert.Equal(40m, result.Charges.Amount);
-
-        Assert.Equal("MASTERCARD", result.Authorization!.Brand);
-        Assert.Equal("customer@example.com", result.Customer!.Email);
-
-        Assert.Equal(json, result.RawJsonResponse);
+        Assert.True(handler.ReceivedCancellationToken.IsCancellationRequested);
     }
 
     [Fact]
@@ -363,37 +564,284 @@ public sealed class PayChanguClientTests
             PayChanguPaymentMethod.MobileMoney);
 
         // Assert
-        Assert.NotNull(result);
-
-        Assert.Equal(PayChanguPaymentFlow.DirectCharge, result.PaymentFlow);
-        Assert.Equal(PayChanguPaymentMethod.MobileMoney, result.PaymentMethod);
-
-        Assert.Equal(chargeId, result.TransactionIdentifier);
-        Assert.Equal(chargeId, result.ChargeId);
-
-        Assert.Equal("ref-001", result.TransactionReference);
-        Assert.Equal("trans-001", result.TransactionId);
-        Assert.Equal("trace-001", result.TraceId);
-
-        Assert.Equal("success", result.ApiStatus);
-        Assert.Equal("success", result.Status);
-
-        Assert.Equal(5000m, result.Amount);
-        Assert.Equal("MWK", result.Currency);
-
-        Assert.NotNull(result.Charges);
-        Assert.Equal("MWK", result.Charges.Currency);
-        Assert.Equal(100m, result.Charges.Amount);
-
-        Assert.Equal("Airtel Money", result.MobileMoney!.Name);
-        Assert.Equal("john@example.com", result.Customer!.Email);
-
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal(
+            PayChanguPaymentFlow.DirectCharge,
+            result.Result.PaymentFlow);
+
+        Assert.Equal(
+            PayChanguPaymentMethod.MobileMoney,
+            result.Result.PaymentMethod);
+
+        Assert.Equal(chargeId, result.Result.TransactionIdentifier);
+        Assert.Equal(chargeId, result.Result.ChargeId);
+
+        Assert.Equal("ref-001", result.Result.TransactionReference);
+        Assert.Equal("trans-001", result.Result.TransactionId);
+        Assert.Equal("trace-001", result.Result.TraceId);
+
+        Assert.Equal("success", result.Result.ApiStatus);
+        Assert.Equal("success", result.Result.Status);
+
+        Assert.Equal(5000m, result.Result.Amount);
+        Assert.Equal("MWK", result.Result.Currency);
+
+        Assert.NotNull(result.Result.Charges);
+        Assert.Equal("MWK", result.Result.Charges.Currency);
+        Assert.Equal(100m, result.Result.Charges.Amount);
+
+        Assert.Equal("Airtel Money", result.Result.MobileMoney!.Name);
+        Assert.Equal("john@example.com", result.Result.Customer!.Email);
 
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
         Assert.Equal(
             new Uri($"{BaseUrl}mobile-money/payments/{chargeId}/verify"),
             handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ReturnsResponse_WhenRequestSucceeds()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "status": "success",
+                    "message": "Payment request initiated successfully.",
+                    "data": {
+                        "amount": 5000,
+                        "charge_id": "charge-001",
+                        "ref_id": "ref-001",
+                        "trans_id": null,
+                        "first_name": "John",
+                        "last_name": "Banda",
+                        "email": "john@example.com",
+                        "status": "pending",
+                        "mobile": "+265991234567",
+                        "attempts": 1,
+                        "currency": "MWK",
+                        "mode": "test",
+                        "created_at": "2026-11-05T10:00:00Z",
+                        "completed_at": null,
+                        "mobile_money": {
+                            "name": "Airtel Money",
+                            "ref_id": "operator-001",
+                            "country": "Malawi"
+                        }
+                    }
+                }
+                """,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var request = new InitiateMobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001",
+            Email = "john@example.com",
+            FirstName = "John",
+            LastName = "Banda"
+        };
+
+        // Act
+        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Payment request initiated successfully.",
+            result.Result.Message);
+
+        Assert.Equal("charge-001", result.Result.Data.ChargeId);
+        Assert.Equal("ref-001", result.Result.Data.ReferenceId);
+        Assert.Equal("pending", result.Result.Data.Status);
+        Assert.Equal(5000m, result.Result.Data.Amount);
+        Assert.Equal("Airtel Money", result.Result.Data.MobileMoney.Name);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent = """{"message":"Invalid operator"}""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(errorContent)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var request = new InitiateMobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "invalid-operator",
+            Amount = "5000",
+            ChargeId = "charge-001"
+        };
+
+        // Act
+        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Null(result.Result);
+
+        Assert.Equal(errorContent, result.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task InitiateMobileMoneyChargeAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string invalidJson = "invalid-json";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(invalidJson)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var request = new InitiateMobileMoneyDirectChargeRequest
+        {
+            Mobile = "+265991234567",
+            MobileMoneyOperatorRefId = "operator-001",
+            Amount = "5000",
+            ChargeId = "charge-001"
+        };
+
+        // Act
+        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+
+        Assert.Equal(invalidJson, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_WhenTransactionChargeAmountIsInvalid_ThrowsPayChanguException()
+    {
+        // Arrange
+        const string json = """
+    {
+        "status": "success",
+        "message": "Payment details retrieved successfully.",
+        "data": {
+            "charge_id": "charge-001",
+            "ref_id": "ref-001",
+            "trans_id": "trans-001",
+            "currency": "MWK",
+            "amount": 5000,
+            "status": "success",
+            "transaction_charges": {
+                "currency": "MWK",
+                "amount": "invalid"
+            },
+            "logs": []
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.VerifyPaymentAsync(
+                "charge-001",
+                PayChanguPaymentFlow.DirectCharge,
+                PayChanguPaymentMethod.MobileMoney));
+
+        // Assert
+        Assert.Contains(
+            "invalid transaction charge amount",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_MobileMoneyDirectChargeWithMissingData_ReturnsFailure()
+    {
+        // Arrange
+        const string responseContent =
+            """
+        {
+            "status": "success",
+            "message": "OK",
+            "data": null
+        }
+        """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            "test-charge-id",
+            PayChanguPaymentFlow.DirectCharge,
+            PayChanguPaymentMethod.MobileMoney);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains(
+            "empty Mobile Money Direct Charge verification data payload",
+            result.ErrorMessage);
+
+        Assert.Equal(responseContent, result.RawJsonResponse);
+        Assert.Null(result.Result);
     }
 
     [Fact]
@@ -456,29 +904,41 @@ public sealed class PayChanguClientTests
             PayChanguPaymentMethod.BankTransfer);
 
         // Assert
-        Assert.NotNull(result);
-
-        Assert.Equal(PayChanguPaymentFlow.DirectCharge, result.PaymentFlow);
-        Assert.Equal(PayChanguPaymentMethod.BankTransfer, result.PaymentMethod);
-
-        Assert.Equal(chargeId, result.TransactionIdentifier);
-        Assert.Equal("bank-ref-001", result.TransactionReference);
-        Assert.Equal("bank-trans-001", result.TransactionId);
-
-        Assert.Equal("success", result.ApiStatus);
-        Assert.Equal("success", result.Status);
-
-        Assert.Equal(10000m, result.Amount);
-        Assert.Equal("MWK", result.Currency);
-
-        Assert.NotNull(result.Charges);
-        Assert.Equal(200m, result.Charges.Amount);
-
-        Assert.Equal("Test Bank", result.Authorization!.PayerBank);
-        Assert.Equal("1234567890", result.Authorization.PayerAccountNumber);
-        Assert.Equal("Jane Banda", result.Authorization.PayerAccountName);
-
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal(
+            PayChanguPaymentFlow.DirectCharge,
+            result.Result.PaymentFlow);
+
+        Assert.Equal(
+            PayChanguPaymentMethod.BankTransfer,
+            result.Result.PaymentMethod);
+
+        Assert.Equal(chargeId, result.Result.TransactionIdentifier);
+        Assert.Equal("bank-ref-001", result.Result.TransactionReference);
+        Assert.Equal("bank-trans-001", result.Result.TransactionId);
+
+        Assert.Equal("success", result.Result.ApiStatus);
+        Assert.Equal("success", result.Result.Status);
+
+        Assert.Equal(10000m, result.Result.Amount);
+        Assert.Equal("MWK", result.Result.Currency);
+
+        Assert.NotNull(result.Result.Charges);
+        Assert.Equal(200m, result.Result.Charges.Amount);
+
+        Assert.Equal("Test Bank", result.Result.Authorization!.PayerBank);
+        Assert.Equal(
+            "1234567890",
+            result.Result.Authorization.PayerAccountNumber);
+
+        Assert.Equal(
+            "Jane Banda",
+            result.Result.Authorization.PayerAccountName);
 
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
         Assert.Equal(
@@ -487,159 +947,71 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task VerifyPaymentAsync_WhenApiReturnsError_ThrowsPayChanguException()
+    public async Task InitiateBankTransferDirectChargeAsync_ReturnsResponse_WhenRequestSucceeds()
     {
         // Arrange
-        const string errorContent = """{"message":"Transaction not found."}""";
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.NotFound)
-            {
-                Content = new StringContent(errorContent)
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "TXN-12345",
-                PayChanguPaymentFlow.Checkout,
-                PayChanguPaymentMethod.Card));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
-        Assert.Equal(errorContent, exception.ResponseContent);
+        const string json = """
+    {
+        "status": "success",
+        "message": "Payment initialized successfully.",
+        "data": {
+            "payment_account_details": {
+                "bank_name": "Centenary Bank",
+                "account_number": "2652493369",
+                "account_name": "PayChangu Dev",
+                "account_expiration_timestamp": 1739830475
+            },
+            "transaction": {
+                "charge_id": "PTC12383",
+                "ref_id": "75513659949",
+                "trans_id": null,
+                "currency": "MK",
+                "amount": 1020,
+                "first_name": null,
+                "last_name": null,
+                "email": null,
+                "type": "Direct API Payment",
+                "trace_id": "v0atWHs0NLEN3vbTAL4DKFLm59dVHuRM",
+                "status": "pending",
+                "mobile": "0",
+                "attempts": 1,
+                "mode": "live",
+                "created_at": "2025-02-17T21:14:35.000000Z",
+                "completed_at": null,
+                "event_type": "api.charge.payment",
+                "transaction_charges": {
+                    "currency": "MK",
+                    "amount": "20"
+                },
+                "authorization": {
+                    "channel": "Mobile Bank Transfer",
+                    "card_number": null,
+                    "expiry": null,
+                    "brand": null,
+                    "provider": null,
+                    "mobile_number": null,
+                    "payer_bank": null,
+                    "payer_account_number": null,
+                    "payer_account_name": null,
+                    "completed_at": null
+                },
+                "logs": [
+                    {
+                        "type": "log",
+                        "message": "Attempted to pay with bank transfer",
+                        "created_at": "2025-02-17T21:14:35.000000Z"
+                    }
+                ]
+            }
+        }
     }
+    """;
 
-    [Fact]
-    public async Task VerifyPaymentAsync_WhenResponseIsInvalidJson_ThrowsPayChanguException()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("invalid-json")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "TXN-12345",
-                PayChanguPaymentFlow.Checkout,
-                PayChanguPaymentMethod.Card));
-
-        // Assert
-        Assert.IsType<JsonException>(exception.InnerException);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task VerifyPaymentAsync_WhenIdentifierIsInvalid_ThrowsArgumentException(
-        string? transactionIdentifier)
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler();
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => client.VerifyPaymentAsync(
-                transactionIdentifier!,
-                PayChanguPaymentFlow.Checkout,
-                PayChanguPaymentMethod.Card));
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_WhenPaymentFlowIsUnsupported_ThrowsArgumentOutOfRangeException()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler();
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => client.VerifyPaymentAsync(
-                "TXN-12345",
-                (PayChanguPaymentFlow)999,
-                PayChanguPaymentMethod.Card));
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_WhenPaymentMethodIsUnsupported_ThrowsArgumentOutOfRangeException()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler();
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => client.VerifyPaymentAsync(
-                "TXN-12345",
-                PayChanguPaymentFlow.Checkout,
-                (PayChanguPaymentMethod)999));
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_DirectChargeCard_ThrowsNotSupportedException()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler();
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotSupportedException>(
-            () => client.VerifyPaymentAsync(
-                "charge-001",
-                PayChanguPaymentFlow.DirectCharge,
-                PayChanguPaymentMethod.Card));
-    }
-
-    [Fact]
-    public async Task InitiateMobileMoneyChargeAsync_ReturnsResponse_WhenRequestSucceeds()
-    {
-        // Arrange
         var handler = new FakeHttpMessageHandler(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    """
-                {
-                    "status": "success",
-                    "message": "Payment request initiated successfully.",
-                    "data": {
-                        "amount": 5000,
-                        "charge_id": "charge-001",
-                        "ref_id": "ref-001",
-                        "trans_id": null,
-                        "first_name": "John",
-                        "last_name": "Banda",
-                        "email": "john@example.com",
-                        "status": "pending",
-                        "mobile": "+265991234567",
-                        "attempts": 1,
-                        "currency": "MWK",
-                        "mode": "test",
-                        "created_at": "2026-11-05T10:00:00Z",
-                        "completed_at": null,
-                        "mobile_money": {
-                            "name": "Airtel Money",
-                            "ref_id": "operator-001",
-                            "country": "Malawi"
-                        }
-                    }
-                }
-                """,
+                    json,
                     Encoding.UTF8,
                     "application/json")
             });
@@ -647,29 +1019,177 @@ public sealed class PayChanguClientTests
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        var request = new InitiateMobileMoneyDirectChargeRequest
+        var request = new InitiateBankTransferDirectChargeRequest
         {
-            Mobile = "+265991234567",
-            MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
-            ChargeId = "charge-001",
-            Email = "john@example.com",
+            Amount = "1020",
+            ChargeId = "PTC12383",
+            Email = "customer@example.com",
             FirstName = "John",
-            LastName = "Banda"
+            LastName = "Banda",
+            Mobile = "0991234567"
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+        var result = await client.InitiateBankTransferDirectChargeAsync(request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("success", result.Status);
-        Assert.Equal("Payment request initiated successfully.", result.Message);
-        Assert.Equal("charge-001", result.Data.ChargeId);
-        Assert.Equal("ref-001", result.Data.ReferenceId);
-        Assert.Equal("pending", result.Data.Status);
-        Assert.Equal(5000m, result.Data.Amount);
-        Assert.Equal("Airtel Money", result.Data.MobileMoney.Name);
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Payment initialized successfully.",
+            result.Result.Message);
+
+        Assert.Equal(
+            "Centenary Bank",
+            result.Result.Data.PaymentAccountDetails.BankName);
+
+        Assert.Equal(
+            "2652493369",
+            result.Result.Data.PaymentAccountDetails.AccountNumber);
+
+        Assert.Equal(
+            "PayChangu Dev",
+            result.Result.Data.PaymentAccountDetails.AccountName);
+
+        Assert.Equal(
+            1739830475L,
+            result.Result.Data.PaymentAccountDetails.AccountExpirationTimestamp);
+
+        Assert.Equal("PTC12383", result.Result.Data.Transaction.ChargeId);
+        Assert.Equal("75513659949", result.Result.Data.Transaction.ReferenceId);
+        Assert.Equal(1020m, result.Result.Data.Transaction.Amount);
+        Assert.Equal("MK", result.Result.Data.Transaction.Currency);
+        Assert.Equal("pending", result.Result.Data.Transaction.Status);
+
+        Assert.Equal(
+            "Mobile Bank Transfer",
+            result.Result.Data.Transaction.Authorization!.Channel);
+
+        Assert.Single(result.Result.Data.Transaction.Logs);
+
+        Assert.Equal(
+            "Attempted to pay with bank transfer",
+            result.Result.Data.Transaction.Logs[0].Message);
+    }
+
+    [Fact]
+    public async Task InitiateBankTransferDirectChargeAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent = """{"message":"Invalid charge request"}""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(errorContent)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var request = new InitiateBankTransferDirectChargeRequest
+        {
+            Amount = "5000",
+            ChargeId = "bank-charge-001"
+        };
+
+        // Act
+        var result = await client.InitiateBankTransferDirectChargeAsync(request);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Null(result.Result);
+
+        Assert.Equal(errorContent, result.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task InitiateBankTransferDirectChargeAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string invalidJson = "invalid-json";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(invalidJson)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var request = new InitiateBankTransferDirectChargeRequest
+        {
+            Amount = "5000",
+            ChargeId = "bank-charge-001"
+        };
+
+        // Act
+        var result = await client.InitiateBankTransferDirectChargeAsync(request);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+
+        Assert.Equal(invalidJson, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_BankTransferDirectChargeWithMissingTransaction_ReturnsFailure()
+    {
+        // Arrange
+        const string responseContent =
+            """
+        {
+            "status": "success",
+            "message": "OK",
+            "data": {
+                "transaction": null
+            }
+        }
+        """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            "test-charge-id",
+            PayChanguPaymentFlow.DirectCharge,
+            PayChanguPaymentMethod.BankTransfer);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains(
+            "empty Bank Transfer Direct Charge verification transaction payload",
+            result.ErrorMessage);
+
+        Assert.Equal(responseContent, result.RawJsonResponse);
+        Assert.Null(result.Result);
     }
 
     [Fact]
@@ -783,68 +1303,6 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task InitiateMobileMoneyChargeAsync_ThrowsPayChanguException_WhenRequestFails()
-    {
-        // Arrange
-        const string errorContent = """{"message":"Invalid operator"}""";
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.BadRequest)
-            {
-                Content = new StringContent(errorContent)
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var request = new InitiateMobileMoneyDirectChargeRequest
-        {
-            Mobile = "+265991234567",
-            MobileMoneyOperatorRefId = "invalid-operator",
-            Amount = "5000",
-            ChargeId = "charge-001"
-        };
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.InitiateMobileMoneyDirectChargeAsync(request));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal(errorContent, exception.ResponseContent);
-    }
-
-    [Fact]
-    public async Task InitiateMobileMoneyChargeAsync_ThrowsPayChanguException_WhenResponseIsInvalidJson()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("invalid-json")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var request = new InitiateMobileMoneyDirectChargeRequest
-        {
-            Mobile = "+265991234567",
-            MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
-            ChargeId = "charge-001"
-        };
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.InitiateMobileMoneyDirectChargeAsync(request));
-
-        // Assert
-        Assert.NotNull(exception.InnerException);
-        Assert.IsType<JsonException>(exception.InnerException);
-    }
-
-    [Fact]
     public async Task InitiateMobileMoneyChargeAsync_ThrowsArgumentNullException_WhenRequestIsNull()
     {
         // Arrange
@@ -855,339 +1313,6 @@ public sealed class PayChanguClientTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => client.InitiateMobileMoneyDirectChargeAsync(null!));
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_WhenCancellationIsRequested_CancelsHttpRequest()
-    {
-        // Arrange
-        using var cancellationTokenSource = new CancellationTokenSource();
-
-        var handler = new FakeHttpMessageHandler(
-            async (_, cancellationToken) =>
-            {
-                await Task.Delay(
-                    Timeout.Infinite,
-                    cancellationToken);
-
-                return new HttpResponseMessage(HttpStatusCode.OK);
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var verificationTask = client.VerifyPaymentAsync(
-            "TXN-12345",
-            PayChanguPaymentFlow.Checkout,
-            PayChanguPaymentMethod.Card,
-            cancellationTokenSource.Token);
-
-        await handler.RequestReceived.Task;
-
-        await cancellationTokenSource.CancelAsync();
-
-        // Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => verificationTask);
-
-        Assert.True(handler.ReceivedCancellationToken.IsCancellationRequested);
-    }
-
-    private static ServiceProvider CreateServiceProvider(
-    FakeHttpMessageHandler handler)
-    {
-        var services = new ServiceCollection();
-
-        services.AddPayChangu(
-            options =>
-            {
-                options.SecretKey = SecretKey;
-                options.BaseUrl = BaseUrl;
-            },
-            httpClient =>
-            {
-                httpClient.ConfigurePrimaryHttpMessageHandler(() => handler);
-            });
-
-        return services.BuildServiceProvider();
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_WhenTransactionChargeAmountIsInvalid_ThrowsPayChanguException()
-    {
-        // Arrange
-        const string json = """
-    {
-        "status": "success",
-        "message": "Payment details retrieved successfully.",
-        "data": {
-            "charge_id": "charge-001",
-            "ref_id": "ref-001",
-            "trans_id": "trans-001",
-            "currency": "MWK",
-            "amount": 5000,
-            "status": "success",
-            "transaction_charges": {
-                "currency": "MWK",
-                "amount": "invalid"
-            },
-            "logs": []
-        }
-    }
-    """;
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json)
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "charge-001",
-                PayChanguPaymentFlow.DirectCharge,
-                PayChanguPaymentMethod.MobileMoney));
-
-        // Assert
-        Assert.Contains(
-            "invalid transaction charge amount",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_CheckoutWithMissingData_ThrowsPayChanguException()
-    {
-        // Arrange
-        const string responseContent =
-            """
-        {
-            "status": "success",
-            "message": "OK",
-            "data": null
-        }
-        """;
-
-        var handler = new FakeHttpMessageHandler(
-    new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    responseContent,
-                    Encoding.UTF8,
-                    "application/json")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "test-reference",
-                PayChanguPaymentFlow.Checkout,
-                PayChanguPaymentMethod.MobileMoney));
-
-        // Assert
-        Assert.Contains("empty Checkout verification data payload", exception.Message);
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_MobileMoneyDirectChargeWithMissingData_ThrowsPayChanguException()
-    {
-        // Arrange
-        const string responseContent =
-            """
-        {
-            "status": "success",
-            "message": "OK",
-            "data": null
-        }
-        """;
-
-        var handler = new FakeHttpMessageHandler(
-        new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(
-                responseContent,
-                Encoding.UTF8,
-                "application/json")
-        });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "test-charge-id",
-                PayChanguPaymentFlow.DirectCharge,
-                PayChanguPaymentMethod.MobileMoney));
-
-        // Assert
-        Assert.Contains(
-            "empty Mobile Money Direct Charge verification data payload",
-            exception.Message);
-    }
-
-    [Fact]
-    public async Task VerifyPaymentAsync_BankTransferDirectChargeWithMissingTransaction_ThrowsPayChanguException()
-    {
-        // Arrange
-        const string responseContent =
-            """
-        {
-            "status": "success",
-            "message": "OK",
-            "data": {
-                "transaction": null
-            }
-        }
-        """;
-
-        var handler = new FakeHttpMessageHandler(
-    new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(
-                responseContent,
-                Encoding.UTF8,
-                "application/json")
-        });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "test-charge-id",
-                PayChanguPaymentFlow.DirectCharge,
-                PayChanguPaymentMethod.BankTransfer));
-
-        // Assert
-        Assert.Contains(
-            "empty Bank Transfer Direct Charge verification transaction payload",
-            exception.Message);
-    }
-
-    [Fact]
-    public async Task InitiateBankTransferDirectChargeAsync_ReturnsResponse_WhenRequestSucceeds()
-    {
-        // Arrange
-        const string json = """
-    {
-        "status": "success",
-        "message": "Payment initialized successfully.",
-        "data": {
-            "payment_account_details": {
-                "bank_name": "Centenary Bank",
-                "account_number": "2652493369",
-                "account_name": "PayChangu Dev",
-                "account_expiration_timestamp": 1739830475
-            },
-            "transaction": {
-                "charge_id": "PTC12383",
-                "ref_id": "75513659949",
-                "trans_id": null,
-                "currency": "MK",
-                "amount": 1020,
-                "first_name": null,
-                "last_name": null,
-                "email": null,
-                "type": "Direct API Payment",
-                "trace_id": "v0atWHs0NLEN3vbTAL4DKFLm59dVHuRM",
-                "status": "pending",
-                "mobile": "0",
-                "attempts": 1,
-                "mode": "live",
-                "created_at": "2025-02-17T21:14:35.000000Z",
-                "completed_at": null,
-                "event_type": "api.charge.payment",
-                "transaction_charges": {
-                    "currency": "MK",
-                    "amount": "20"
-                },
-                "authorization": {
-                    "channel": "Mobile Bank Transfer",
-                    "card_number": null,
-                    "expiry": null,
-                    "brand": null,
-                    "provider": null,
-                    "mobile_number": null,
-                    "payer_bank": null,
-                    "payer_account_number": null,
-                    "payer_account_name": null,
-                    "completed_at": null
-                },
-                "logs": [
-                    {
-                        "type": "log",
-                        "message": "Attempted to pay with bank transfer",
-                        "created_at": "2025-02-17T21:14:35.000000Z"
-                    }
-                ]
-            }
-        }
-    }
-    """;
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    json,
-                    Encoding.UTF8,
-                    "application/json")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var request = new InitiateBankTransferDirectChargeRequest
-        {
-            Amount = "1020",
-            ChargeId = "PTC12383",
-            Email = "customer@example.com",
-            FirstName = "John",
-            LastName = "Banda",
-            Mobile = "0991234567"
-        };
-
-        // Act
-        var result = await client.InitiateBankTransferDirectChargeAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("success", result.Status);
-        Assert.Equal("Payment initialized successfully.", result.Message);
-
-        Assert.Equal("Centenary Bank", result.Data.PaymentAccountDetails.BankName);
-        Assert.Equal("2652493369", result.Data.PaymentAccountDetails.AccountNumber);
-        Assert.Equal("PayChangu Dev", result.Data.PaymentAccountDetails.AccountName);
-        Assert.Equal(
-            1739830475L,
-            result.Data.PaymentAccountDetails.AccountExpirationTimestamp);
-
-        Assert.Equal("PTC12383", result.Data.Transaction.ChargeId);
-        Assert.Equal("75513659949", result.Data.Transaction.ReferenceId);
-        Assert.Equal(1020m, result.Data.Transaction.Amount);
-        Assert.Equal("MK", result.Data.Transaction.Currency);
-        Assert.Equal("pending", result.Data.Transaction.Status);
-
-        Assert.Equal(
-            "Mobile Bank Transfer",
-            result.Data.Transaction.Authorization!.Channel);
-
-        Assert.Single(result.Data.Transaction.Logs);
-        Assert.Equal(
-            "Attempted to pay with bank transfer",
-            result.Data.Transaction.Logs[0].Message);
     }
 
     [Fact]
@@ -1296,64 +1421,6 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task InitiateBankTransferDirectChargeAsync_ThrowsPayChanguException_WhenRequestFails()
-    {
-        // Arrange
-        const string errorContent = """{"message":"Invalid charge request"}""";
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.BadRequest)
-            {
-                Content = new StringContent(errorContent)
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var request = new InitiateBankTransferDirectChargeRequest
-        {
-            Amount = "5000",
-            ChargeId = "bank-charge-001"
-        };
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.InitiateBankTransferDirectChargeAsync(request));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal(errorContent, exception.ResponseContent);
-    }
-
-    [Fact]
-    public async Task InitiateBankTransferDirectChargeAsync_ThrowsPayChanguException_WhenResponseIsInvalidJson()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("invalid-json")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var request = new InitiateBankTransferDirectChargeRequest
-        {
-            Amount = "5000",
-            ChargeId = "bank-charge-001"
-        };
-
-        // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.InitiateBankTransferDirectChargeAsync(request));
-
-        // Assert
-        Assert.NotNull(exception.InnerException);
-        Assert.IsType<JsonException>(exception.InnerException);
-    }
-
-    [Fact]
     public async Task InitiateBankTransferDirectChargeAsync_ThrowsArgumentNullException_WhenRequestIsNull()
     {
         // Arrange
@@ -1367,22 +1434,73 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task VerifyPaymentAsync_DirectChargeCard_ReturnsSuccess_WhenRequestSucceeds()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            "charge-001",
+            PayChanguPaymentFlow.DirectCharge,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Null(result.Result);
+
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_DirectChargeCard_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest));
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.VerifyPaymentAsync(
+            "charge-001",
+            PayChanguPaymentFlow.DirectCharge,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Null(result.Result);
+
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+    }
+
+    [Fact]
     public async Task GetBalanceAsync_ReturnsBalance_WhenRequestSucceeds()
     {
+        // Arrange
         var handler = new FakeHttpMessageHandler(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
                     """
                 {
-                  "status": "success",
-                  "message": "Wallet balances retrieved successfully",
-                  "data": {
-                    "environment": "live",
-                    "currency": "MWK",
-                    "main_balance": "953037.95",
-                    "collection_balance": 0
-                  }
+                    "status": "success",
+                    "message": "Wallet balances retrieved successfully",
+                    "data": {
+                        "environment": "live",
+                        "currency": "MWK",
+                        "main_balance": "953037.95",
+                        "collection_balance": 0
+                    }
                 }
                 """,
                     Encoding.UTF8,
@@ -1392,14 +1510,120 @@ public sealed class PayChanguClientTests
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
+        // Act
         var result = await client.GetBalanceAsync();
 
-        Assert.Equal("success", result.Status);
-        Assert.Equal("Wallet balances retrieved successfully", result.Message);
-        Assert.Equal("live", result.Data.Environment);
-        Assert.Equal("MWK", result.Data.Currency);
-        Assert.Equal("953037.95", result.Data.MainBalance);
-        Assert.Equal(0m, result.Data.CollectionBalance);
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Wallet balances retrieved successfully",
+            result.Result.Message);
+
+        Assert.Equal("live", result.Result.Data.Environment);
+        Assert.Equal("MWK", result.Result.Data.Currency);
+        Assert.Equal("953037.95", result.Result.Data.MainBalance);
+        Assert.Equal(0m, result.Result.Data.CollectionBalance);
+    }
+
+    [Fact]
+    public async Task GetBalanceAsync_UsesSpecifiedCurrency()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "status": "success",
+                    "message": "Success",
+                    "data": {
+                        "environment": "live",
+                        "currency": "USD",
+                        "main_balance": "100",
+                        "collection_balance": 0
+                    }
+                }
+                """)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetBalanceAsync("USD");
+
+        // Assert
+        Assert.Equal(
+            "https://api.paychangu.com/wallet-balance?currency=USD",
+            handler.RequestUri!.ToString());
+
+        Assert.True(result.Success);
+        Assert.Equal("USD", result.Result!.Data.Currency);
+    }
+
+    [Fact]
+    public async Task GetBalanceAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent =
+            """{"status":"failed","message":"Unauthorized"}""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent(errorContent)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetBalanceAsync();
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Null(result.Result);
+
+        Assert.Equal(errorContent, result.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task GetBalanceAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string invalidJson = "invalid json";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(invalidJson)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetBalanceAsync();
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+
+        Assert.Equal(invalidJson, result.RawJsonResponse);
+        Assert.Null(result.Result);
     }
 
     [Fact]
@@ -1424,28 +1648,6 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task GetBalanceAsync_UsesSpecifiedCurrency()
-    {
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    """{"status":"success","message":"Success","data":{"environment":"live","currency":"USD","main_balance":"100","collection_balance":0}}""")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var result = await client.GetBalanceAsync("USD");
-
-        Assert.Equal(
-            "https://api.paychangu.com/wallet-balance?currency=USD",
-            handler.RequestUri!.ToString());
-
-        Assert.Equal("USD", result.Data.Currency);
-    }
-
-    [Fact]
     public async Task GetBalanceAsync_SendsBearerAuthentication()
     {
         var handler = new FakeHttpMessageHandler(
@@ -1463,44 +1665,4 @@ public sealed class PayChanguClientTests
         Assert.Equal("Bearer", handler.AuthorizationScheme);
         Assert.Equal(SecretKey, handler.AuthorizationParameter);
     }
-
-    [Fact]
-    public async Task GetBalanceAsync_ThrowsPayChanguException_WhenRequestFails()
-    {
-        const string errorContent = """{"status":"failed","message":"Unauthorized"}""";
-
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.Unauthorized)
-            {
-                Content = new StringContent(errorContent)
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetBalanceAsync());
-
-        Assert.Equal(HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal(errorContent, exception.ResponseContent);
-    }
-
-    [Fact]
-    public async Task GetBalanceAsync_ThrowsPayChanguException_WhenResponseIsInvalidJson()
-    {
-        var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("invalid json")
-            });
-
-        using var serviceProvider = CreateServiceProvider(handler);
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetBalanceAsync());
-
-        Assert.IsType<JsonException>(exception.InnerException);
-    }
-
 }

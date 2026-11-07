@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using PayChangu.NET.Models.Base;
+using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
 
@@ -6,20 +7,8 @@ namespace PayChangu.NET.Models;
 /// Represents the response returned when verifying a Bank Transfer
 /// Direct Charge transaction.
 /// </summary>
-internal sealed class VerifyBankTransferDirectChargeResponse
+internal sealed class VerifyBankTransferDirectChargeResponse : BasePaychanguResponse
 {
-    /// <summary>
-    /// Gets or sets the API response status.
-    /// </summary>
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the API response message.
-    /// </summary>
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = null!;
-
     /// <summary>
     /// Gets or sets the response data.
     /// </summary>

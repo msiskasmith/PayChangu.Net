@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PayChangu.NET.Models.Base;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
@@ -8,7 +9,7 @@ namespace PayChangu.NET.Models;
 /// Represents the normalized response returned when verifying a PayChangu payment,
 /// regardless of the payment flow or payment method used.
 /// </summary>
-public sealed class VerifyPaymentResponse
+public sealed class VerifyPaymentResponse : BasePaychanguResponse
 {
     /// <summary>
     /// Gets or sets the payment flow used to process the transaction.
@@ -70,19 +71,9 @@ public sealed class VerifyPaymentResponse
     public string? Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the final status of the transaction.
-    /// </summary>
-    public string Status { get; set; } = null!;
-
-    /// <summary>
     /// Gets or sets the status returned by the PayChangu verification API.
     /// </summary>
     public string ApiStatus { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the message returned by the PayChangu verification API.
-    /// </summary>
-    public string Message { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the total number of payment attempts, when available.
@@ -149,11 +140,6 @@ public sealed class VerifyPaymentResponse
     /// Gets or sets the date and time when the transaction was last updated.
     /// </summary>
     public DateTimeOffset? UpdatedAt { get; set; }
-
-    /// <summary>
-    /// Gets or sets the original JSON response returned by PayChangu.
-    /// </summary>
-    public string? RawJsonResponse { get; set; }
 }
 
 /// <summary>

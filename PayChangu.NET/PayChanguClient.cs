@@ -1,15 +1,17 @@
-﻿using PayChangu.NET.Exceptions;
+﻿using PayChangu.NET.Constants;
+using PayChangu.NET.Exceptions;
 using PayChangu.NET.Models;
+using PayChangu.NET.Models.Base;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using PayChangu.NET.Constants;
-using System.Globalization;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace PayChangu.NET;
 
@@ -48,7 +50,7 @@ public interface IPayChanguClient
     /// Thrown when the operation is cancelled through the
     /// <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InitiateCheckoutResponse> InitiatePaymentAsync(
+    Task<PayChanguApiResponse<InitiateCheckoutResponse>> InitiatePaymentAsync(
         InitiateCheckoutRequest request,
         CancellationToken cancellationToken = default);
 
@@ -81,7 +83,7 @@ public interface IPayChanguClient
     /// Thrown when Card is supplied with the Direct Charge payment flow,
     /// which is not currently supported.
     /// </exception>
-    Task<VerifyPaymentResponse> VerifyPaymentAsync(
+    Task<PayChanguApiResponse<VerifyPaymentResponse>> VerifyPaymentAsync(
         string transactionIdentifier,
         PayChanguPaymentFlow paymentFlow,
         PayChanguPaymentMethod paymentMethod,
@@ -111,7 +113,7 @@ public interface IPayChanguClient
     /// Thrown when the operation is cancelled through the
     /// <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InitiateMobileMoneyDirectChargeResponse> InitiateMobileMoneyDirectChargeAsync(
+    Task<PayChanguApiResponse<InitiateMobileMoneyDirectChargeResponse>> InitiateMobileMoneyDirectChargeAsync(
         InitiateMobileMoneyDirectChargeRequest request,
         CancellationToken cancellationToken = default);
 
@@ -139,7 +141,7 @@ public interface IPayChanguClient
     /// Thrown when the operation is cancelled through the
     /// <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InitiateBankTransferDirectChargeResponse> InitiateBankTransferDirectChargeAsync(
+    Task<PayChanguApiResponse<InitiateBankTransferDirectChargeResponse>> InitiateBankTransferDirectChargeAsync(
         InitiateBankTransferDirectChargeRequest request,
         CancellationToken cancellationToken = default);
 
@@ -153,17 +155,21 @@ public interface IPayChanguClient
     /// A token to monitor for cancellation requests.
     /// </param>
     /// <returns>The wallet balance details.</returns>
-    Task<GetBalanceResponse> GetBalanceAsync(
+    Task<PayChanguApiResponse<GetBalanceResponse>> GetBalanceAsync(
         string currency = "MWK",
         CancellationToken cancellationToken = default);
 }
+
 
 /// <summary>
 /// Provides the HTTP implementation of <see cref="IPayChanguClient"/>.
 /// </summary>
 /// <remarks>
-/// This implementation is registered through dependency injection
-/// and is not intended to be instantiated directly by consumers.
+/// This implementation handles HTTP communication, authentication through
+/// the configured <see cref="HttpClient"/>, JSON serialization, and
+/// deserialization when communicating with the PayChangu API.
+/// It is registered through dependency injection and is not intended
+/// to be instantiated directly by consumers.
 /// </remarks>
 internal sealed class PayChanguClient : IPayChanguClient
 {
@@ -188,61 +194,40 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<InitiateCheckoutResponse> InitiatePaymentAsync(
-        InitiateCheckoutRequest request,
-        CancellationToken cancellationToken = default)
+    public async Task<PayChanguApiResponse<InitiateCheckoutResponse>>
+        InitiatePaymentAsync(
+            InitiateCheckoutRequest request,
+            CancellationToken cancellationToken = default)
     {
         if (request == null)
+        {
             throw new ArgumentNullException(nameof(request));
+        }
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
             PayChanguApiEndpoints.HostedCheckout.InitiateTransaction);
-
-        var json = JsonSerializer.Serialize(request, _jsonOptions);
 
         httpRequest.Content = new StringContent(
             json,
             Encoding.UTF8,
             "application/json");
 
-        using var response = await _httpClient.SendAsync(
-                    httpRequest,
-                    cancellationToken);
-
-        var content = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new PayChanguException(
-                $"PayChangu returned an error ({(int)response.StatusCode}): {content}",
-                response.StatusCode,
-                content);
-        }
-
-        try
-        {
-            var result = JsonSerializer.Deserialize<InitiateCheckoutResponse>(
-                content,
-                _jsonOptions);
-
-            return result ?? throw new PayChanguException(
-                "PayChangu returned an empty response.");
-        }
-        catch (JsonException ex)
-        {
-            throw new PayChanguException(
-                "Unable to deserialize PayChangu response.",
-                ex);
-        }
+        return await SendAsync<InitiateCheckoutResponse>(
+            httpRequest,
+            "Standard Checkout initiation",
+            cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<VerifyPaymentResponse> VerifyPaymentAsync(
-        string transactionIdentifier,
-        PayChanguPaymentFlow paymentFlow,
-        PayChanguPaymentMethod paymentMethod,
-        CancellationToken cancellationToken = default)
+    public async Task<PayChanguApiResponse<VerifyPaymentResponse>>
+        VerifyPaymentAsync(
+            string transactionIdentifier,
+            PayChanguPaymentFlow paymentFlow,
+            PayChanguPaymentMethod paymentMethod,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(transactionIdentifier))
         {
@@ -271,20 +256,35 @@ internal sealed class PayChanguClient : IPayChanguClient
 
             var response = await GetAsync<VerifyCheckoutPaymentResponse>(
                 endpoint,
-                "verification",
+                "Checkout verification",
                 cancellationToken);
 
-            if (response.Data.Data == null)
+            // Return the original API failure without attempting to map its data.
+            if (!response.Success)
             {
-                throw new PayChanguException(
-                    "PayChangu returned an empty Checkout verification data payload.");
+                return CopyFailure<VerifyCheckoutPaymentResponse, VerifyPaymentResponse>(
+                    response);
             }
 
-            return MapCheckoutVerificationResponse(
-                response.Data,
-                response.RawJsonResponse,
+            var checkoutData = response.Result?.Data;
+
+            if (checkoutData == null)
+            {
+                return CreateFailure<VerifyPaymentResponse>(
+                    response.StatusCode,
+                    "PayChangu returned an empty Checkout verification data payload.",
+                    response.RawJsonResponse);
+            }
+
+            var verification = MapCheckoutVerificationResponse(
+                response.Result!,
                 transactionIdentifier,
                 paymentMethod);
+
+            return CreateSuccess(
+                response.StatusCode,
+                verification,
+                response.RawJsonResponse);
         }
 
         if (paymentFlow == PayChanguPaymentFlow.DirectCharge)
@@ -305,19 +305,35 @@ internal sealed class PayChanguClient : IPayChanguClient
                                 "Mobile Money Direct Charge verification",
                                 cancellationToken);
 
-                        if (response.Data.Data == null)
+                        // Preserve the API failure and its original response details.
+                        if (!response.Success)
                         {
-                            throw new PayChanguException(
-                                "PayChangu returned an empty Mobile Money Direct Charge verification data payload.");
+                            return CopyFailure<
+                                VerifyMobileMoneyDirectChargeResponse,
+                                VerifyPaymentResponse>(response);
                         }
 
-                        return MapDirectChargeVerificationResponse(
-                            response.Data.Status,
-                            response.Data.Message,
-                            response.Data.Data,
-                            response.RawJsonResponse,
+                        var directChargeData = response.Result?.Data;
+
+                        if (directChargeData == null)
+                        {
+                            return CreateFailure<VerifyPaymentResponse>(
+                                response.StatusCode,
+                                "PayChangu returned an empty Mobile Money Direct Charge verification data payload.",
+                                response.RawJsonResponse);
+                        }
+
+                        var verification = MapDirectChargeVerificationResponse(
+                            response.Result!.Status,
+                            response.Result.Message,
+                            directChargeData,
                             transactionIdentifier,
                             paymentMethod);
+
+                        return CreateSuccess(
+                            response.StatusCode,
+                            verification,
+                            response.RawJsonResponse);
                     }
 
                 case PayChanguPaymentMethod.BankTransfer:
@@ -334,24 +350,60 @@ internal sealed class PayChanguClient : IPayChanguClient
                                 "Bank Transfer Direct Charge verification",
                                 cancellationToken);
 
-                        if (response.Data.Data?.Transaction == null)
+                        // Preserve the API failure and its original response details.
+                        if (!response.Success)
                         {
-                            throw new PayChanguException(
-                                "PayChangu returned an empty Bank Transfer Direct Charge verification transaction payload.");
+                            return CopyFailure<
+                                VerifyBankTransferDirectChargeResponse,
+                                VerifyPaymentResponse>(response);
                         }
 
-                        return MapDirectChargeVerificationResponse(
-                            response.Data.Status,
-                            response.Data.Message,
-                            response.Data.Data.Transaction,
-                            response.RawJsonResponse,
-                            transactionIdentifier,
-                            paymentMethod);
+                        var transaction = response.Result?.Data?.Transaction;
+
+                        if (transaction == null)
+                        {
+                            return CreateFailure<VerifyPaymentResponse>(
+                                response.StatusCode,
+                                "PayChangu returned an empty Bank Transfer Direct Charge verification transaction payload.",
+                                response.RawJsonResponse);
+                        }
+
+                        try
+                        {
+                            var verification = MapDirectChargeVerificationResponse(
+                                response.Result!.Status,
+                                response.Result.Message,
+                                transaction,
+                                transactionIdentifier,
+                                paymentMethod);
+
+                            return CreateSuccess(
+                                response.StatusCode,
+                                verification,
+                                response.RawJsonResponse);
+                        }
+                        catch (PayChanguException ex)
+                        {
+                            return CreateFailure<VerifyPaymentResponse>(
+                                response.StatusCode,
+                                ex.Message,
+                                response.RawJsonResponse);
+                        }
                     }
 
                 case PayChanguPaymentMethod.Card:
-                    throw new NotSupportedException(
-                        "Card Direct Charge verification is not yet supported.");
+                    {
+                        var endpoint = PayChanguApiEndpoints.DirectChargeCard
+                            .VerifyDirectChargeStatus
+                            .Replace(
+                                "{id}",
+                                Uri.EscapeDataString(transactionIdentifier));
+
+                        return await GetStatusAsync<VerifyPaymentResponse>(
+                            endpoint,
+                            "Card Direct Charge verification",
+                            cancellationToken);
+                    }
 
                 default:
                     throw new ArgumentOutOfRangeException(
@@ -368,154 +420,321 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<InitiateMobileMoneyDirectChargeResponse> InitiateMobileMoneyDirectChargeAsync(
-        InitiateMobileMoneyDirectChargeRequest request,
-        CancellationToken cancellationToken = default)
+    public async Task<PayChanguApiResponse<InitiateMobileMoneyDirectChargeResponse>>
+        InitiateMobileMoneyDirectChargeAsync(
+            InitiateMobileMoneyDirectChargeRequest request,
+            CancellationToken cancellationToken = default)
     {
         if (request == null)
+        {
             throw new ArgumentNullException(nameof(request));
+        }
 
         var json = JsonSerializer.Serialize(request, _jsonOptions);
 
-        using var content = new StringContent(
-            json,
-            Encoding.UTF8,
-            "application/json");
-
-        using var response = await _httpClient.PostAsync(
-            PayChanguApiEndpoints.MobileMoneyDirectCharge.InitiateMobileMoneyDirectCharge,
-            content,
-            cancellationToken);
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new PayChanguException(
-                "Failed to initiate mobile money charge.",
-                response.StatusCode,
-                responseContent);
-        }
-
-        try
-        {
-            var result = JsonSerializer.Deserialize<InitiateMobileMoneyDirectChargeResponse>(
-                        responseContent,
-                        _jsonOptions);
-
-            return result ?? throw new PayChanguException(
-                "PayChangu returned an empty mobile money charge response.");
-        }
-        catch (JsonException ex)
-        {
-            throw new PayChanguException(
-                "Failed to deserialize the mobile money charge response.",
-                ex);
-        }
-    }
-
-    public async Task<InitiateBankTransferDirectChargeResponse> InitiateBankTransferDirectChargeAsync(
-    InitiateBankTransferDirectChargeRequest request,
-    CancellationToken cancellationToken = default)
-    {
-        if (request == null)
-            throw new ArgumentNullException(nameof(request));
-
-        var json = JsonSerializer.Serialize(request, _jsonOptions);
-
-        using var content = new StringContent(
-            json,
-            Encoding.UTF8,
-            "application/json");
-
-        using var response = await _httpClient.PostAsync(
-            PayChanguApiEndpoints.BankTransferDirectCharge.InitiateBankTransferDirectCharge,
-            content,
-            cancellationToken);
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new PayChanguException(
-                "Failed to initiate bank transfer charge.",
-                response.StatusCode,
-                responseContent);
-        }
-
-        try
-        {
-            var result = JsonSerializer.Deserialize<InitiateBankTransferDirectChargeResponse>(
-                responseContent,
-                _jsonOptions);
-
-            return result ?? throw new PayChanguException(
-                "PayChangu returned an empty bank transfer charge response.");
-        }
-        catch (JsonException ex)
-        {
-            throw new PayChanguException(
-                "Failed to deserialize the bank transfer charge response.",
-                ex);
-        }
-    }
-
-    private async Task<PayChanguApiResponse<TResponse>> GetAsync<TResponse>(
-    string endpoint,
-    string operation,
-    CancellationToken cancellationToken)
-    where TResponse : class
-    {
         using var httpRequest = new HttpRequestMessage(
-            HttpMethod.Get,
-            endpoint);
+            HttpMethod.Post,
+            PayChanguApiEndpoints.MobileMoneyDirectCharge
+                .InitiateMobileMoneyDirectCharge);
 
+        httpRequest.Content = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json");
+
+        return await SendAsync<InitiateMobileMoneyDirectChargeResponse>(
+            httpRequest,
+            "Mobile Money Direct Charge initiation",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<InitiateBankTransferDirectChargeResponse>>
+        InitiateBankTransferDirectChargeAsync(
+            InitiateBankTransferDirectChargeRequest request,
+            CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            PayChanguApiEndpoints.BankTransferDirectCharge
+                .InitiateBankTransferDirectCharge);
+
+        httpRequest.Content = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json");
+
+        return await SendAsync<InitiateBankTransferDirectChargeResponse>(
+            httpRequest,
+            "Bank Transfer Direct Charge initiation",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetBalanceResponse>>
+        GetBalanceAsync(
+            string currency = "MWK",
+            CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(currency))
+        {
+            throw new ArgumentException(
+                "Currency cannot be null or empty.",
+                nameof(currency));
+        }
+
+        var endpoint = PayChanguApiEndpoints.Account.GetBalance.Replace(
+            "{iso}",
+            Uri.EscapeDataString(currency));
+
+        return await GetAsync<GetBalanceResponse>(
+            endpoint,
+            "wallet balance retrieval",
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends an HTTP request to PayChangu and deserializes the response.
+    /// </summary>
+    /// <typeparam name="TResponse">The expected response model type.</typeparam>
+    /// <param name="httpRequest">The HTTP request to send.</param>
+    /// <param name="operation">A description of the API operation.</param>
+    /// <param name="cancellationToken">A token used to cancel the asynchronous operation.</param>
+    /// <returns>
+    /// A response wrapper containing the deserialized API response on success,
+    /// or the HTTP status code, error message, and raw response on failure.
+    /// </returns>
+    /// <remarks>
+    /// HTTP errors, empty response bodies, and JSON deserialization failures
+    /// are represented by a failed <see cref="PayChanguApiResponse{T}"/>.
+    /// HTTP transport exceptions and cancellation exceptions are not caught
+    /// and will propagate to the caller.
+    /// </remarks>
+    private async Task<PayChanguApiResponse<TResponse>> SendAsync<TResponse>(
+        HttpRequestMessage httpRequest,
+        string operation,
+        CancellationToken cancellationToken)
+        where TResponse : class
+    {
         using var response = await _httpClient.SendAsync(
             httpRequest,
             cancellationToken);
 
         var content = await response.Content.ReadAsStringAsync();
 
+        // Return unsuccessful HTTP responses as API response objects.
         if (!response.IsSuccessStatusCode)
         {
-            throw new PayChanguException(
+            return CreateFailure<TResponse>(
+                response.StatusCode,
                 $"PayChangu returned an error during {operation} " +
                 $"({(int)response.StatusCode}): {content}",
+                content);
+        }
+
+        // A successful HTTP status does not guarantee a valid response body.
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return CreateFailure<TResponse>(
                 response.StatusCode,
+                $"PayChangu returned an empty response during {operation}.",
                 content);
         }
 
         try
         {
             var result = JsonSerializer.Deserialize<TResponse>(
-                    content,
-                    _jsonOptions);
+                content,
+                _jsonOptions);
 
             if (result == null)
             {
-                throw new PayChanguException(
-                    $"PayChangu returned an empty response during {operation}.");
+                return CreateFailure<TResponse>(
+                    response.StatusCode,
+                    $"PayChangu returned an empty response during {operation}.",
+                    content);
             }
 
-            return new PayChanguApiResponse<TResponse>
-            {
-                Data = result,
-                RawJsonResponse = content
-            };
+            return CreateSuccess(
+                response.StatusCode,
+                result,
+                content);
         }
         catch (JsonException ex)
         {
-            throw new PayChanguException(
-                $"Unable to deserialize PayChangu response during {operation}.",
-                ex);
+            return CreateFailure<TResponse>(
+                response.StatusCode,
+                $"Unable to deserialize the PayChangu response during {operation}: {ex.Message}",
+                content);
         }
     }
 
+    /// <summary>
+    /// Sends a GET request to PayChangu and deserializes the response.
+    /// </summary>
+    /// <typeparam name="TResponse">The expected response model type.</typeparam>
+    /// <param name="endpoint">The API endpoint to request.</param>
+    /// <param name="operation">A description of the API operation.</param>
+    /// <param name="cancellationToken">A token used to cancel the asynchronous operation.</param>
+    /// <returns>
+    /// A response wrapper containing the deserialized API response or failure details.
+    /// </returns>
+    private async Task<PayChanguApiResponse<TResponse>> GetAsync<TResponse>(
+        string endpoint,
+        string operation,
+        CancellationToken cancellationToken)
+        where TResponse : class
+    {
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            endpoint);
+
+        return await SendAsync<TResponse>(
+            httpRequest,
+            operation,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a GET request and evaluates its success using the HTTP status code
+    /// without attempting to deserialize the response body.
+    /// </summary>
+    /// <typeparam name="TResponse">The expected response data type.</typeparam>
+    /// <param name="endpoint">The API endpoint to send the request to.</param>
+    /// <param name="operation">A description of the operation being performed.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>
+    /// A response indicating whether the request was successful and the HTTP
+    /// status code returned by PayChangu.
+    /// </returns>
+    private async Task<PayChanguApiResponse<TResponse>> GetStatusAsync<TResponse>(
+        string endpoint,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            endpoint);
+
+        using var response = await _httpClient.SendAsync(
+            request,
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.OK)
+        {
+            return CreateSuccess<TResponse>(
+                response.StatusCode,
+                null);
+        }
+
+        var errorMessage =
+            $"{operation} failed with HTTP status code {(int)response.StatusCode}.";
+
+        return CreateFailure<TResponse>(
+            response.StatusCode,
+            errorMessage,
+            null);
+    }
+
+    /// <summary>
+    /// Creates a successful API response wrapper.
+    /// </summary>
+    /// <typeparam name="T">The type of data returned by the API.</typeparam>
+    /// <param name="statusCode">The HTTP status code returned by PayChangu.</param>
+    /// <param name="data">The deserialized response data.</param>
+    /// <param name="rawJsonResponse">The original JSON response body.</param>
+    /// <returns>A successful API response wrapper.</returns>
+    private static PayChanguApiResponse<T> CreateSuccess<T>(
+        HttpStatusCode? statusCode,
+        T data,
+        string? rawJsonResponse)
+    {
+        return new PayChanguApiResponse<T>
+        {
+            Success = true,
+            StatusCode = statusCode,
+            Result = data,
+            RawJsonResponse = rawJsonResponse
+        };
+    }
+
+    /// <summary>
+    /// Creates a successful API response wrapper.
+    /// </summary>
+    /// <typeparam name="T">The type of data returned by the API.</typeparam>
+    /// <param name="statusCode">The HTTP status code returned by PayChangu.</param>
+    /// <param name="rawJsonResponse">The original JSON response body.</param>
+    /// <returns>A successful API response wrapper.</returns>
+    private static PayChanguApiResponse<T> CreateSuccess<T>(
+        HttpStatusCode? statusCode,
+        string? rawJsonResponse)
+    {
+        return new PayChanguApiResponse<T>
+        {
+            Success = true,
+            StatusCode = statusCode,
+            RawJsonResponse = rawJsonResponse
+        };
+    }
+
+    /// <summary>
+    /// Creates a failed API response wrapper.
+    /// </summary>
+    /// <typeparam name="T">The expected type of data returned by the API.</typeparam>
+    /// <param name="statusCode">The HTTP status code, if available.</param>
+    /// <param name="errorMessage">The reason the API operation failed.</param>
+    /// <param name="rawJsonResponse">The original response body, if available.</param>
+    /// <returns>A failed API response wrapper.</returns>
+    private static PayChanguApiResponse<T> CreateFailure<T>(
+        HttpStatusCode? statusCode,
+        string errorMessage,
+        string? rawJsonResponse)
+    {
+        return new PayChanguApiResponse<T>
+        {
+            Success = false,
+            StatusCode = statusCode,
+            ErrorMessage = errorMessage,
+            RawJsonResponse = rawJsonResponse
+        };
+    }
+
+    /// <summary>
+    /// Copies a failed API response into a wrapper with a different data type.
+    /// </summary>
+    /// <typeparam name="TSource">The original response data type.</typeparam>
+    /// <typeparam name="TResult">The target response data type.</typeparam>
+    /// <param name="response">The original failed API response.</param>
+    /// <returns>A failed API response using the target data type.</returns>
+    private static PayChanguApiResponse<TResult>
+        CopyFailure<TSource, TResult>(
+            PayChanguApiResponse<TSource> response)
+    {
+        return CreateFailure<TResult>(
+            response.StatusCode,
+            response.ErrorMessage ?? "The PayChangu API request failed.",
+            response.RawJsonResponse);
+    }
+
+    /// <summary>
+    /// Maps a PayChangu Checkout verification response to the normalized
+    /// verification response model.
+    /// </summary>
+    /// <param name="response">The original Checkout verification response.</param>
+    /// <param name="transactionIdentifier">The merchant transaction reference.</param>
+    /// <param name="paymentMethod">The payment method used for the transaction.</param>
+    /// <returns>The normalized payment verification response.</returns>
     private static VerifyPaymentResponse MapCheckoutVerificationResponse(
-    VerifyCheckoutPaymentResponse response,
-    string rawJsonResponse,
-    string transactionIdentifier,
-    PayChanguPaymentMethod paymentMethod)
+        VerifyCheckoutPaymentResponse response,
+        string transactionIdentifier,
+        PayChanguPaymentMethod paymentMethod)
     {
         var data = response.Data;
 
@@ -592,18 +811,26 @@ internal sealed class PayChanguClient : IPayChanguClient
 
             CreatedAt = data.CreatedAt,
             UpdatedAt = data.UpdatedAt,
-            CompletedAt = data.Authorization?.CompletedAt,
-            RawJsonResponse = rawJsonResponse
+            CompletedAt = data.Authorization?.CompletedAt
         };
     }
 
+    /// <summary>
+    /// Maps a PayChangu Direct Charge transaction to the normalized
+    /// verification response model.
+    /// </summary>
+    /// <param name="apiStatus">The status of the PayChangu API response.</param>
+    /// <param name="message">The message returned by PayChangu.</param>
+    /// <param name="transaction">The Direct Charge transaction details.</param>
+    /// <param name="transactionIdentifier">The charge identifier used for verification.</param>
+    /// <param name="paymentMethod">The payment method used for the transaction.</param>
+    /// <returns>The normalized payment verification response.</returns>
     private static VerifyPaymentResponse MapDirectChargeVerificationResponse(
-    string apiStatus,
-    string message,
-    PayChanguDirectChargeTransaction transaction,
-    string rawJsonResponse,
-    string transactionIdentifier,
-    PayChanguPaymentMethod paymentMethod)
+        string apiStatus,
+        string message,
+        PayChanguDirectChargeTransaction transaction,
+        string transactionIdentifier,
+        PayChanguPaymentMethod paymentMethod)
     {
         return new VerifyPaymentResponse
         {
@@ -682,11 +909,18 @@ internal sealed class PayChanguClient : IPayChanguClient
                 .ToList() ?? new List<VerificationLog>(),
 
             CreatedAt = transaction.CreatedAt,
-            CompletedAt = transaction.CompletedAt,
-            RawJsonResponse = rawJsonResponse
+            CompletedAt = transaction.CompletedAt
         };
     }
 
+    /// <summary>
+    /// Parses a transaction charge amount using invariant culture.
+    /// </summary>
+    /// <param name="amount">The charge amount returned by PayChangu.</param>
+    /// <returns>The parsed charge amount.</returns>
+    /// <exception cref="PayChanguException">
+    /// Thrown when the charge amount cannot be parsed as a decimal value.
+    /// </exception>
     private static decimal ParseChargeAmount(string amount)
     {
         if (!decimal.TryParse(
@@ -701,55 +935,4 @@ internal sealed class PayChanguClient : IPayChanguClient
 
         return result;
     }
-
-    public async Task<GetBalanceResponse> GetBalanceAsync(
-    string currency = "MWK",
-    CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(currency))
-            throw new ArgumentException(
-                "Currency cannot be null or empty.",
-                nameof(currency));
-
-        var endpoint = PayChanguApiEndpoints.Account.GetBalance.Replace(
-            "{iso}",
-            Uri.EscapeDataString(currency));
-
-        using var response = await _httpClient.GetAsync(
-            endpoint,
-            cancellationToken);
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new PayChanguException(
-                "Failed to retrieve wallet balance.",
-                response.StatusCode,
-                responseContent);
-        }
-
-        try
-        {
-            var result = JsonSerializer.Deserialize<GetBalanceResponse>(
-                responseContent,
-                _jsonOptions);
-
-            return result ?? throw new PayChanguException(
-                "PayChangu returned an empty wallet balance response.");
-        }
-        catch (JsonException ex)
-        {
-            throw new PayChanguException(
-                "Failed to deserialize the wallet balance response.",
-                ex);
-        }
-    }
-}
-
-internal sealed class PayChanguApiResponse<TResponse>
-{
-    public TResponse Data { get; set; } = default!;
-
-    public string RawJsonResponse { get; set; } = null!;
 }
