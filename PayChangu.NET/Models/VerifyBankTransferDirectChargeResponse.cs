@@ -25,5 +25,5 @@ internal sealed class BankTransferDirectChargeVerificationData
     /// Gets or sets the verified transaction details.
     /// </summary>
     [JsonPropertyName("transaction")]
-    public PayChanguDirectChargeTransaction Transaction { get; set; } = null!;
+    public PayChanguTransaction Transaction { get; set; } = null!;
 }

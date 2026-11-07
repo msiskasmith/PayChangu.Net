@@ -957,6 +957,291 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task GetMobileMoneyDirectChargeDetailsAsync_ReturnsTransactionDetails_WhenRequestSucceeds()
+    {
+        // Arrange
+        const string chargeId = "74536";
+
+        const string json = """
+    {
+        "status": "success",
+        "message": "Transaction retrieved successfully.",
+        "data": {
+            "amount": 50,
+            "charge_id": "74536",
+            "ref_id": "36013728295",
+            "trans_id": "e90ec6c4-18b0-4503-b2df-ee19436b31d6",
+            "first_name": null,
+            "last_name": null,
+            "email": null,
+            "type": "Direct API Payment",
+            "trace_id": "wS3bV5uZkWEnKPv8r9Cv0ikII4BzuJ2S",
+            "status": "success",
+            "mobile": "+265992xxxx20",
+            "attempts": 1,
+            "currency": "MK",
+            "mode": "live",
+            "created_at": "2025-01-03T22:39:48.000000Z",
+            "completed_at": "2025-01-03T22:40:10.000000Z",
+            "event_type": "api.charge.payment",
+            "mobile_money": {
+                "name": "Airtel Money",
+                "ref_id": "20be6c20-adeb-4b5b-a7ba-0769820df4fb",
+                "country": "Malawi"
+            },
+            "transaction_charges": {
+                "currency": "MK",
+                "amount": "1.5"
+            },
+            "authorization": {
+                "channel": "Mobile Money",
+                "card_number": null,
+                "expiry": null,
+                "brand": null,
+                "provider": "Airtel Money",
+                "mobile_number": null,
+                "completed_at": "2025-01-03T22:40:10.000000Z"
+            },
+            "logs": [
+                {
+                    "type": "log",
+                    "message": "Payment transaction initialized and PIN authorization requested.",
+                    "created_at": "2025-01-03T22:39:51.000000Z"
+                },
+                {
+                    "type": "log",
+                    "message": "Airtel Money payment transaction confirmed successfully.",
+                    "created_at": "2025-01-03T22:40:10.000000Z"
+                }
+            ]
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetMobileMoneyDirectChargeDetailsAsync(chargeId);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Transaction retrieved successfully.",
+            result.Result.Message);
+
+        var transaction = result.Result.Data;
+
+        Assert.Equal(50m, transaction.Amount);
+        Assert.Equal(chargeId, transaction.ChargeId);
+        Assert.Equal("36013728295", transaction.ReferenceId);
+        Assert.Equal(
+            "e90ec6c4-18b0-4503-b2df-ee19436b31d6",
+            transaction.TransactionId);
+
+        Assert.Null(transaction.FirstName);
+        Assert.Null(transaction.LastName);
+        Assert.Null(transaction.Email);
+
+        Assert.Equal("Direct API Payment", transaction.Type);
+        Assert.Equal(
+            "wS3bV5uZkWEnKPv8r9Cv0ikII4BzuJ2S",
+            transaction.TraceId);
+
+        Assert.Equal("success", transaction.Status);
+        Assert.Equal("+265992xxxx20", transaction.Mobile);
+        Assert.Equal(1, transaction.Attempts);
+        Assert.Equal("MK", transaction.Currency);
+        Assert.Equal("live", transaction.Mode);
+
+        Assert.Equal(
+            DateTimeOffset.Parse("2025-01-03T22:39:48.000000Z"),
+            transaction.CreatedAt);
+
+        Assert.Equal(
+            DateTimeOffset.Parse("2025-01-03T22:40:10.000000Z"),
+            transaction.CompletedAt);
+
+        Assert.Equal("api.charge.payment", transaction.EventType);
+
+        Assert.NotNull(transaction.MobileMoney);
+        Assert.Equal("Airtel Money", transaction.MobileMoney.Name);
+        Assert.Equal(
+            "20be6c20-adeb-4b5b-a7ba-0769820df4fb",
+            transaction.MobileMoney.ReferenceId);
+        Assert.Equal("Malawi", transaction.MobileMoney.Country);
+
+        Assert.NotNull(transaction.TransactionCharges);
+        Assert.Equal("MK", transaction.TransactionCharges.Currency);
+        Assert.Equal("1.5", transaction.TransactionCharges.Amount);
+
+        Assert.NotNull(transaction.Authorization);
+        Assert.Equal("Mobile Money", transaction.Authorization.Channel);
+        Assert.Equal("Airtel Money", transaction.Authorization.Provider);
+        Assert.Null(transaction.Authorization.CardNumber);
+        Assert.Null(transaction.Authorization.MobileNumber);
+
+        Assert.Equal(
+            DateTimeOffset.Parse("2025-01-03T22:40:10.000000Z"),
+            transaction.Authorization.CompletedAt);
+
+        Assert.Equal(2, transaction.Logs.Count);
+
+        Assert.Equal(
+            "Payment transaction initialized and PIN authorization requested.",
+            transaction.Logs[0].Message);
+
+        Assert.Equal(
+            "Airtel Money payment transaction confirmed successfully.",
+            transaction.Logs[1].Message);
+    }
+
+    [Fact]
+    public async Task GetMobileMoneyDirectChargeDetailsAsync_SendsCorrectHttpRequest()
+    {
+        // Arrange
+        const string chargeId = "74536";
+
+        const string responseContent = """
+    {
+        "status": "success",
+        "message": "Transaction retrieved successfully.",
+        "data": {}
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.GetMobileMoneyDirectChargeDetailsAsync(chargeId);
+
+        // Assert
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+
+        Assert.Equal(
+            new Uri($"{BaseUrl}mobile-money/payments/{chargeId}/details"),
+            handler.RequestUri);
+
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal(SecretKey, handler.AuthorizationParameter);
+    }
+
+    [Fact]
+    public async Task GetMobileMoneyDirectChargeDetailsAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string errorContent = """
+    {
+        "status": "failed",
+        "message": "Transaction not found.",
+        "data": null
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(
+                    errorContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetMobileMoneyDirectChargeDetailsAsync("74536");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+
+        Assert.Equal("Transaction not found.", result.ErrorMessage);
+
+        Assert.Null(result.Result);
+        Assert.Equal(errorContent, result.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task GetMobileMoneyDirectChargeDetailsAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string invalidJson = "invalid-json";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    invalidJson,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetMobileMoneyDirectChargeDetailsAsync("74536");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+
+        Assert.Null(result.Result);
+        Assert.Equal(invalidJson, result.RawJsonResponse);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetMobileMoneyDirectChargeDetailsAsync_WhenChargeIdIsInvalid_ThrowsPayChanguException(
+    string? chargeId)
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler();
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<PayChanguException>(
+            () => client.GetMobileMoneyDirectChargeDetailsAsync(chargeId!));
+
+        Assert.Null(handler.RequestUri);
+    }
+
+    [Fact]
     public async Task VerifyPaymentAsync_WhenTransactionChargeAmountIsInvalid_ThrowsPayChanguException()
     {
         // Arrange

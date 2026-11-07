@@ -13,5 +13,5 @@ internal sealed class VerifyMobileMoneyDirectChargeResponse : BasePaychanguRespo
     /// Gets or sets the verified transaction details.
     /// </summary>
     [JsonPropertyName("data")]
-    public PayChanguDirectChargeTransaction Data { get; set; } = null!;
+    public PayChanguTransaction Data { get; set; } = null!;
 }

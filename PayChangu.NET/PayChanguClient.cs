@@ -131,6 +131,21 @@ public interface IPayChanguClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves the details of a Mobile Money Direct Charge transaction.
+    /// </summary>
+    /// <param name="chargeId">The PayChangu charge identifier.</param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the API request.
+    /// </param>
+    /// <returns>
+    /// A response containing the retrieved transaction details.
+    /// </returns>
+    Task<PayChanguApiResponse<GetMobileMoneyDirectChargeDetailsResponse>>
+        GetMobileMoneyDirectChargeDetailsAsync(
+            string chargeId,
+            CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Initiates a direct bank transfer payment request.
     /// </summary>
     /// <param name="request">
@@ -469,6 +484,28 @@ internal sealed class PayChanguClient : IPayChanguClient
         return await SendAsync<InitiateMobileMoneyDirectChargeResponse>(
             httpRequest,
             "Mobile Money Direct Charge initiation",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetMobileMoneyDirectChargeDetailsResponse>>
+        GetMobileMoneyDirectChargeDetailsAsync(
+            string chargeId,
+            CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            throw new PayChanguException(
+                "The charge ID cannot be null, empty, or whitespace.");
+        }
+
+        var endpoint = PayChanguApiEndpoints.MobileMoneyDirectCharge
+            .GetSingleChargeDetails
+            .Replace("{id}", Uri.EscapeDataString(chargeId));
+
+        return await GetAsync<GetMobileMoneyDirectChargeDetailsResponse>(
+            endpoint,
+            "mobile money direct charge details retrieval",
             cancellationToken);
     }
 
@@ -902,7 +939,7 @@ internal sealed class PayChanguClient : IPayChanguClient
     private static VerifyPaymentResponse MapDirectChargeVerificationResponse(
         string apiStatus,
         string message,
-        PayChanguDirectChargeTransaction transaction,
+        PayChanguTransaction transaction,
         string transactionIdentifier,
         PayChanguPaymentMethod paymentMethod)
     {

@@ -30,7 +30,7 @@ public sealed class BankTransferDirectChargeData
     /// Gets or sets the transaction details.
     /// </summary>
     [JsonPropertyName("transaction")]
-    public PayChanguDirectChargeTransaction Transaction { get; set; } = null!;
+    public PayChanguTransaction Transaction { get; set; } = null!;
 }
 
 /// <summary>

@@ -8,7 +8,7 @@ namespace PayChangu.NET.Models;
 /// Represents the transaction details returned when verifying a PayChangu
 /// Direct Charge payment, regardless of the payment method used.
 /// </summary>
-public sealed class PayChanguDirectChargeTransaction
+public sealed class PayChanguTransaction
 {
     /// <summary>
     /// Gets or sets the PayChangu charge identifier.
