@@ -212,6 +212,29 @@ public interface IPayChanguClient
         InitiateCardChargeRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Refunds a Card Direct Charge transaction.
+    /// </summary>
+    /// <param name="chargeId">
+    /// The unique charge identifier of the transaction to refund.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the API request.
+    /// </param>
+    /// <returns>
+    /// A response indicating whether PayChangu successfully processed
+    /// the refund request, based on the HTTP status code.
+    /// </returns>
+    /// <exception cref="PayChanguException">
+    /// Thrown when the charge ID is null, empty, or consists only of whitespace.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is cancelled.
+    /// </exception>
+    Task<PayChanguApiResponse> RefundCardChargeAsync(
+        string chargeId,
+        CancellationToken cancellationToken = default);
+
 
     /// <summary>
     /// Retrieves the wallet balance for the specified currency.
@@ -629,6 +652,27 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
+    public async Task<PayChanguApiResponse> RefundCardChargeAsync(
+        string chargeId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            throw new PayChanguException(
+                "The charge ID cannot be null, empty, or whitespace.");
+        }
+
+        var endpoint = PayChanguApiEndpoints.DirectChargeCard
+            .RefundCharge
+            .Replace("{id}", Uri.EscapeDataString(chargeId));
+
+        return await PostStatusAsync(
+            endpoint,
+            "Card Direct Charge refund",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetBalanceResponse>>
         GetBalanceAsync(
             string currency = "MWK",
@@ -842,6 +886,48 @@ internal sealed class PayChanguClient : IPayChanguClient
             response.StatusCode,
             errorMessage,
             null);
+    }
+
+    /// <summary>
+    /// Sends a POST request and evaluates its success using the HTTP status code
+    /// without attempting to deserialize the response body.
+    /// </summary>
+    /// <param name="endpoint">The API endpoint to send the request to.</param>
+    /// <param name="operation">A description of the operation being performed.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>
+    /// A response indicating whether the request was successful and the HTTP
+    /// status code returned by PayChangu.
+    /// </returns>
+    private async Task<PayChanguApiResponse> PostStatusAsync(
+        string endpoint,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            endpoint);
+
+        using var response = await _httpClient.SendAsync(
+            request,
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.OK)
+        {
+            return new PayChanguApiResponse
+            {
+                Success = true,
+                StatusCode = response.StatusCode
+            };
+        }
+
+        return new PayChanguApiResponse
+        {
+            Success = false,
+            StatusCode = response.StatusCode,
+            ErrorMessage =
+                $"{operation} failed with HTTP status code {(int)response.StatusCode}."
+        };
     }
 
     /// <summary>

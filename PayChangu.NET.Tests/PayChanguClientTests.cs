@@ -2407,6 +2407,149 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task RefundCardChargeAsync_WhenSuccessful_ReturnsSuccessResponse()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.RefundCardChargeAsync("card-charge-001");
+
+        // Assert
+        Assert.True(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RefundCardChargeAsync_SendsPostRequestToCorrectEndpoint()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.RefundCardChargeAsync("card-charge-001");
+
+        // Assert
+        Assert.Equal(HttpMethod.Post, handler.RequestMethod);
+        Assert.Equal(
+            new Uri($"{BaseUrl}charge-card/refund/card-charge-001"),
+            handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task RefundCardChargeAsync_DoesNotSendRequestBody()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.RefundCardChargeAsync("card-charge-001");
+
+        // Assert
+        Assert.Null(handler.RequestContent);
+    }
+
+    [Fact]
+    public async Task RefundCardChargeAsync_SendsBearerAuthentication()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.RefundCardChargeAsync("card-charge-001");
+
+        // Assert
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal(SecretKey, handler.AuthorizationParameter);
+    }
+
+    [Fact]
+    public async Task RefundCardChargeAsync_WhenHttpRequestFails_ReturnsFailureResponse()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.RefundCardChargeAsync("card-charge-001");
+
+        // Assert
+        Assert.False(response.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "Card Direct Charge refund failed with HTTP status code 400.",
+            response.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RefundCardChargeAsync_WhenChargeIdContainsSpecialCharacters_EscapesChargeId()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        const string chargeId = "card/charge 001";
+
+        // Act
+        await client.RefundCardChargeAsync(chargeId);
+
+        // Assert
+        Assert.Equal(
+            new Uri($"{BaseUrl}charge-card/refund/card%2Fcharge%20001"),
+            handler.RequestUri);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    public async Task RefundCardChargeAsync_WhenChargeIdIsInvalid_ThrowsPayChanguException(
+    string? chargeId)
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.RefundCardChargeAsync(chargeId!));
+
+        // Assert
+        Assert.Equal(
+            "The charge ID cannot be null, empty, or whitespace.",
+            exception.Message);
+
+        Assert.Null(handler.RequestUri);
+    }
+
+    [Fact]
     public async Task VerifyPaymentAsync_DirectChargeCard_ReturnsSuccess_WhenRequestSucceeds()
     {
         // Arrange
