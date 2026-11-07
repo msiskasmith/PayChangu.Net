@@ -605,6 +605,199 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task GetMobileMoneyOperatorsAsync_ReturnsOperators_WhenRequestSucceeds()
+    {
+        const string responseContent = """
+        {
+          "status": "success",
+          "message": "Supported mobile money operators retrieved successfully.",
+          "data": [
+            {
+              "id": 1,
+              "name": "TNM Mpamba",
+              "ref_id": "27494cb5-ba9e-437f-a114-4e7a7686bcca",
+              "short_code": "tnm",
+              "logo": null,
+              "supports_withdrawals": true,
+              "supported_country": {
+                "name": "Malawi",
+                "currency": "MWK"
+              }
+            },
+            {
+              "id": 2,
+              "name": "Airtel Money",
+              "ref_id": "20be6c20-adeb-4b5b-a7ba-0769820df4fb",
+              "short_code": "airtel",
+              "logo": null,
+              "supports_withdrawals": true,
+              "supported_country": {
+                "name": "Malawi",
+                "currency": "MWK"
+              }
+            },
+            {
+              "id": 5,
+              "name": "Changu Wallet",
+              "ref_id": "550c35a2-86aa-4590-9931-8f23e664cee9",
+              "short_code": "changu_wallet",
+              "logo": null,
+              "supports_withdrawals": true,
+              "supported_country": {
+                "name": "Malawi",
+                "currency": "MWK"
+              }
+            }
+          ]
+        }
+        """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var result = await client.GetMobileMoneyOperatorsAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(responseContent, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Supported mobile money operators retrieved successfully.",
+            result.Result.Message);
+
+        Assert.Equal(3, result.Result.Data.Count);
+
+        var tnm = result.Result.Data[0];
+
+        Assert.Equal(1, tnm.Id);
+        Assert.Equal("TNM Mpamba", tnm.Name);
+        Assert.Equal(
+            "27494cb5-ba9e-437f-a114-4e7a7686bcca",
+            tnm.RefId);
+        Assert.Equal("tnm", tnm.ShortCode);
+        Assert.Null(tnm.Logo);
+        Assert.True(tnm.SupportsWithdrawals);
+        Assert.Equal("Malawi", tnm.SupportedCountry.Name);
+        Assert.Equal("MWK", tnm.SupportedCountry.Currency);
+
+        var airtel = result.Result.Data[1];
+
+        Assert.Equal(2, airtel.Id);
+        Assert.Equal("Airtel Money", airtel.Name);
+        Assert.Equal("airtel", airtel.ShortCode);
+
+        var changuWallet = result.Result.Data[2];
+
+        Assert.Equal(5, changuWallet.Id);
+        Assert.Equal("Changu Wallet", changuWallet.Name);
+        Assert.Equal("changu_wallet", changuWallet.ShortCode);
+    }
+
+    [Fact]
+    public async Task GetMobileMoneyOperatorsAsync_SendsCorrectHttpRequest()
+    {
+        const string responseContent = """
+        {
+          "status": "success",
+          "message": "Supported mobile money operators retrieved successfully.",
+          "data": []
+        }
+        """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        await client.GetMobileMoneyOperatorsAsync();
+
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+        Assert.Equal(
+            new Uri($"{BaseUrl}mobile-money"),
+            handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task GetMobileMoneyOperatorsAsync_ReturnsFailure_WhenRequestFails()
+    {
+        const string responseContent = """
+        {
+          "status": "failed",
+          "message": "Unable to retrieve supported mobile money operators."
+        }
+        """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var result = await client.GetMobileMoneyOperatorsAsync();
+
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Null(result.Result);
+        Assert.Equal(responseContent, result.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task GetMobileMoneyOperatorsAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        const string responseContent = "Invalid JSON response";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    responseContent,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var result = await client.GetMobileMoneyOperatorsAsync();
+
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Contains("Unable to deserialize", result.ErrorMessage);
+        Assert.Null(result.Result);
+        Assert.Equal(responseContent, result.RawJsonResponse);
+    }
+
+    [Fact]
     public async Task InitiateMobileMoneyChargeAsync_ReturnsResponse_WhenRequestSucceeds()
     {
         // Arrange

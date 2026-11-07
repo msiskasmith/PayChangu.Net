@@ -90,6 +90,19 @@ public interface IPayChanguClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves the mobile money operators supported by PayChangu.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the asynchronous operation.
+    /// </param>
+    /// <returns>
+    /// A response containing the supported mobile money operators.
+    /// </returns>
+    Task<PayChanguApiResponse<GetMobileMoneyOperatorsResponse>>
+        GetMobileMoneyOperatorsAsync(
+            CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Initiates a direct mobile money payment request.
     /// </summary>
     /// <param name="request">
@@ -417,6 +430,17 @@ internal sealed class PayChanguClient : IPayChanguClient
             nameof(paymentFlow),
             paymentFlow,
             "Only Checkout and Direct Charge payment flows are supported.");
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetMobileMoneyOperatorsResponse>>
+        GetMobileMoneyOperatorsAsync(
+            CancellationToken cancellationToken = default)
+    {
+        return await GetAsync<GetMobileMoneyOperatorsResponse>(
+            PayChanguApiEndpoints.MobileMoneyDirectCharge.GetMobileMoneyOperators,
+            "mobile money operators retrieval",
+            cancellationToken);
     }
 
     /// <inheritdoc />
