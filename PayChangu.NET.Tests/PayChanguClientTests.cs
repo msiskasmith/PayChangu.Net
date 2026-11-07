@@ -1682,6 +1682,256 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task GetBankTransferDirectChargeDetailsAsync_ReturnsTransactionDetails_WhenRequestSucceeds()
+    {
+        // Arrange
+        const string responseJson = """
+    {
+      "status": "success",
+      "message": "Transaction retrieved successfully.",
+      "data": {
+        "transaction": {
+          "charge_id": "PTC12383",
+          "ref_id": "75513659949",
+          "trans_id": null,
+          "currency": "MK",
+          "amount": 1000,
+          "first_name": null,
+          "last_name": null,
+          "email": null,
+          "type": "Direct API Payment",
+          "trace_id": "v0atWHs0NLEN3vbTAL4DKFLm59dVHuRM",
+          "status": "success",
+          "mobile": "0",
+          "attempts": 1,
+          "mode": "live",
+          "created_at": "2025-02-17T21:14:35.000000Z",
+          "completed_at": "2025-02-17T21:18:40.000000Z",
+          "event_type": "api.charge.payment",
+          "transaction_charges": {
+            "currency": "MK",
+            "amount": "20"
+          },
+          "authorization": {
+            "channel": "Mobile Bank Transfer",
+            "card_number": null,
+            "expiry": null,
+            "brand": null,
+            "provider": null,
+            "mobile_number": null,
+            "payer_bank_uuid": "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
+            "payer_bank": "National Bank of Malawi",
+            "payer_account_number": "1007134421",
+            "payer_account_name": "Jonathan Manda",
+            "completed_at": "2025-02-17T21:18:40.000000Z"
+          },
+          "logs": [
+            {
+              "type": "log",
+              "message": "Attempted to pay with bank transfer",
+              "created_at": "2025-02-17T21:14:35.000000Z"
+            },
+            {
+              "type": "log",
+              "message": "Bank transfer payment processed successfully.",
+              "created_at": "2025-02-17T21:18:40.000000Z"
+            }
+          ]
+        }
+      }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(responseJson)
+            });
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.GetBankTransferDirectChargeDetailsAsync(
+            "PTC12383");
+
+        // Assert
+        Assert.True(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.ErrorMessage);
+        Assert.NotNull(response.Result);
+        Assert.Equal(responseJson, response.RawJsonResponse);
+
+        var result = response.Result;
+
+        Assert.Equal("success", result.Status);
+        Assert.Equal("Transaction retrieved successfully.", result.Message);
+
+        var transaction = result.Data.Transaction;
+
+        Assert.Equal("PTC12383", transaction.ChargeId);
+        Assert.Equal("75513659949", transaction.ReferenceId);
+        Assert.Null(transaction.TransactionId);
+        Assert.Equal("MK", transaction.Currency);
+        Assert.Equal(1000m, transaction.Amount);
+        Assert.Equal("Direct API Payment", transaction.Type);
+        Assert.Equal("v0atWHs0NLEN3vbTAL4DKFLm59dVHuRM", transaction.TraceId);
+        Assert.Equal("success", transaction.Status);
+        Assert.Equal("0", transaction.Mobile);
+        Assert.Equal(1, transaction.Attempts);
+        Assert.Equal("live", transaction.Mode);
+        Assert.Equal("api.charge.payment", transaction.EventType);
+
+        Assert.NotNull(transaction.TransactionCharges);
+        Assert.Equal("MK", transaction.TransactionCharges.Currency);
+        Assert.Equal("20", transaction.TransactionCharges.Amount);
+
+        Assert.NotNull(transaction.Authorization);
+        Assert.Equal("Mobile Bank Transfer", transaction.Authorization.Channel);
+        Assert.Equal(
+            "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
+            transaction.Authorization.PayerBankUuid);
+        Assert.Equal(
+            "National Bank of Malawi",
+            transaction.Authorization.PayerBank);
+        Assert.Equal(
+            "1007134421",
+            transaction.Authorization.PayerAccountNumber);
+        Assert.Equal(
+            "Jonathan Manda",
+            transaction.Authorization.PayerAccountName);
+
+        Assert.NotNull(transaction.Logs);
+        Assert.Equal(2, transaction.Logs.Count);
+        Assert.Equal(
+            "Attempted to pay with bank transfer",
+            transaction.Logs[0].Message);
+        Assert.Equal(
+            "Bank transfer payment processed successfully.",
+            transaction.Logs[1].Message);
+    }
+
+    [Fact]
+    public async Task GetBankTransferDirectChargeDetailsAsync_SendsCorrectHttpRequest()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                {
+                    "status": "success",
+                    "message": "Transaction retrieved successfully.",
+                    "data": {
+                        "transaction": {}
+                    }
+                }
+                """)
+            });
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.GetBankTransferDirectChargeDetailsAsync("PTC12383");
+
+        // Assert
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+        Assert.Equal(
+            $"{BaseUrl}direct-charge/transactions/PTC12383/details",
+            handler.RequestUri?.ToString());
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal(SecretKey, handler.AuthorizationParameter);
+    }
+
+    [Fact]
+    public async Task GetBankTransferDirectChargeDetailsAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string responseJson = """
+    {
+        "status": "failed",
+        "message": "Transaction not found.",
+        "data": null
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(responseJson)
+            });
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.GetBankTransferDirectChargeDetailsAsync(
+            "PTC12383");
+
+        // Assert
+        Assert.False(response.Success);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("Transaction not found.", response.ErrorMessage);
+        Assert.Null(response.Result);
+        Assert.Equal(responseJson, response.RawJsonResponse);
+    }
+
+    [Fact]
+    public async Task GetBankTransferDirectChargeDetailsAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string invalidJson = "{ invalid json }";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(invalidJson)
+            });
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.GetBankTransferDirectChargeDetailsAsync(
+            "PTC12383");
+
+        // Assert
+        Assert.False(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Unable to deserialize", response.ErrorMessage);
+        Assert.Null(response.Result);
+        Assert.Equal(invalidJson, response.RawJsonResponse);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    public async Task GetBankTransferDirectChargeDetailsAsync_ThrowsPayChanguException_WhenChargeIdIsInvalid(
+    string? chargeId)
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler();
+
+        using var provider = CreateServiceProvider(handler);
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.GetBankTransferDirectChargeDetailsAsync(chargeId!));
+
+        // Assert
+        Assert.Equal(
+            "The charge ID cannot be null, empty, or whitespace.",
+            exception.Message);
+
+        Assert.Null(handler.RequestUri);
+    }
+
+    [Fact]
     public async Task InitiateMobileMoneyChargeAsync_UsesCorrectEndpoint()
     {
         // Arrange

@@ -174,6 +174,21 @@ public interface IPayChanguClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves the details of a Bank Transfer Direct Charge transaction.
+    /// </summary>
+    /// <param name="chargeId">The PayChangu charge identifier.</param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the API request.
+    /// </param>
+    /// <returns>
+    /// A response containing the retrieved transaction details.
+    /// </returns>
+    Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
+        GetBankTransferDirectChargeDetailsAsync(
+            string chargeId,
+            CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves the wallet balance for the specified currency.
     /// </summary>
     /// <param name="currency">
@@ -535,6 +550,28 @@ internal sealed class PayChanguClient : IPayChanguClient
         return await SendAsync<InitiateBankTransferDirectChargeResponse>(
             httpRequest,
             "Bank Transfer Direct Charge initiation",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
+        GetBankTransferDirectChargeDetailsAsync(
+            string chargeId,
+            CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            throw new PayChanguException(
+                "The charge ID cannot be null, empty, or whitespace.");
+        }
+
+        var endpoint = PayChanguApiEndpoints.BankTransferDirectCharge
+            .GetSingleChargeDetails
+            .Replace("{id}", Uri.EscapeDataString(chargeId));
+
+        return await GetAsync<GetBankTransferDirectChargeDetailsResponse>(
+            endpoint,
+            "bank transfer direct charge details retrieval",
             cancellationToken);
     }
 
