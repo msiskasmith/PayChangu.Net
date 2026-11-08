@@ -93,108 +93,15 @@ Registration provides the following services:
 
 Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
 
-## Webhooks
-
-PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
-
-PayChangu.NET provides `IPayChanguWebhookService` to validate webhook signatures and deserialize incoming notifications into a strongly typed `PayChanguWebhookEvent`.
-
-### Validating and parsing a webhook
-
-Always validate the signature against the original, unmodified request body before processing the event.
-
-```csharp
-public class PayChanguWebhookController : ControllerBase
-{
-    private readonly IPayChanguWebhookService _webhookService;
-
-    public PayChanguWebhookController(
-        IPayChanguWebhookService webhookService)
-    {
-        _webhookService = webhookService;
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ReceiveWebhook()
-    {
-        using var reader = new StreamReader(Request.Body);
-        var payload = await reader.ReadToEndAsync();
-
-        var signature = Request.Headers["Signature"].ToString();
-
-        if (!_webhookService.VerifySignature(payload, signature))
-        {
-            return Unauthorized();
-        }
-
-        PayChanguWebhookEvent webhookEvent;
-
-        try
-        {
-            webhookEvent = _webhookService.ParseWebhook(payload);
-        }
-        catch (ArgumentException)
-        {
-            return BadRequest();
-        }
-        catch (JsonException)
-        {
-            return BadRequest();
-        }
-
-        // Process the webhook event here.
-
-        return Ok();
-    }
-}
-```
-
-The example uses ASP.NET Core controller conventions. Add the appropriate `System.IO`, `System.Text.Json`, and ASP.NET Core namespaces to your controller.
-
-### Handling webhook events
-
-The `PayChanguWebhookEvent` model exposes the event type, transaction details, payment flow, payment method, and relevant customer or recipient information.
-
-The SDK recognizes these event types:
-
-| Event type | Payment flow | Transaction identifier |
-|---|---|---|
-| `checkout.payment` | `Checkout` | Merchant transaction reference (`tx_ref`) |
-| `api.charge.payment` | `DirectCharge` | PayChangu charge identifier (`charge_id`) |
-| `api.payout` | `Payout` | PayChangu charge identifier (`charge_id`) |
-
-You can use the derived `PaymentFlow`, `PaymentMethod`, and `TransactionIdentifier` properties to determine how to handle an event.
-
-```csharp
-switch (webhookEvent.PaymentFlow)
-{
-    case PayChanguPaymentFlow.Checkout:
-    case PayChanguPaymentFlow.DirectCharge:
-        var transactionIdentifier = webhookEvent.TransactionIdentifier;
-        var paymentMethod = webhookEvent.PaymentMethod;
-
-        // Handle or verify the payment.
-        break;
-
-    case PayChanguPaymentFlow.Payout:
-        // Handle the payout notification.
-        break;
-
-    default:
-        // Handle an unrecognized event type.
-        break;
-}
-```
-`TransactionIdentifier` returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to `VerifyPaymentAsync`.
-
-Standard Checkout
+## Standard Checkout
 
 Standard Checkout allows you to initiate a payment and redirect the customer to a PayChangu-hosted checkout page.
 
-Initiating a payment
+### Initiating a payment
 
-Inject IPayChanguClient into your application service or controller. Create an InitiateCheckoutRequest and pass it to InitiatePaymentAsync.
+Inject `IPayChanguClient` into your application service or controller. Create an `InitiateCheckoutRequest` and pass it to `InitiatePaymentAsync`.
 
+```csharp
 using System;
 using System.Net;
 using System.Threading;
@@ -257,33 +164,34 @@ public class PaymentsController : Controller
         return Redirect(response.Result.Data.CheckoutUrl);
     }
 }
+```
 
-A successful initiation response provides the checkout URL through response.Result.Data.CheckoutUrl. Redirect the customer to this URL to complete the payment.
+A successful initiation response provides the checkout URL through `response.Result.Data.CheckoutUrl`. Redirect the customer to this URL to complete the payment.
 
-Callback and return URLs
+### Callback and return URLs
 
 Standard Checkout uses two separate URLs for different purposes:
 
-CallbackUrl — PayChangu sends a callback for successful transactions to this URL. Provide a publicly accessible endpoint in your application to handle it.
-
-ReturnUrl — PayChangu redirects the customer to this URL when checkout is canceled or fails. Use it to bring the customer back to your application and display the appropriate outcome.
+- **`CallbackUrl`** — PayChangu sends a callback for successful transactions to this URL. Provide a publicly accessible endpoint in your application to handle it.
+- **`ReturnUrl`** — PayChangu redirects the customer to this URL when checkout is canceled or fails. Use it to bring the customer back to your application and display the appropriate outcome.
 
 These URLs serve different purposes from the webhook endpoint. Configure your webhook endpoint separately in the PayChangu dashboard.
 
-Important: Do not rely solely on a callback or customer redirect to fulfil an order. Verify the transaction and confirm its final status before treating the payment as completed.
+**Important:** Do not rely solely on a callback or customer redirect to fulfil an order. Verify the transaction and confirm its final status before treating the payment as completed.
 
-Webhooks
+## Webhooks
 
 PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
 
-Configure your application's publicly accessible webhook endpoint in the PayChangu dashboard. This endpoint is separate from the CallbackUrl and ReturnUrl supplied when initiating a Standard Checkout payment.
+Configure your application's publicly accessible webhook endpoint in the PayChangu dashboard. This endpoint is separate from the `CallbackUrl` and `ReturnUrl` supplied when initiating a Standard Checkout payment.
 
-PayChangu.NET provides IPayChanguWebhookService to validate webhook signatures and deserialize incoming notifications into a strongly typed PayChanguWebhookEvent.
+PayChangu.NET provides `IPayChanguWebhookService` to validate webhook signatures and deserialize incoming notifications into a strongly typed `PayChanguWebhookEvent`.
 
-Validating and parsing a webhook
+### Validating and parsing a webhook
 
 Always validate the signature against the original, unmodified request body before processing the event.
 
+```csharp
 using System.IO;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
@@ -332,41 +240,25 @@ public class PayChanguWebhookController : ControllerBase
         return Ok();
     }
 }
+```
 
 The example uses ASP.NET Core controller conventions. Add the appropriate ASP.NET Core namespaces to your controller.
 
-Handling webhook events
+### Handling webhook events
 
-The PayChanguWebhookEvent model exposes the event type, transaction details, payment flow, payment method, and relevant customer or recipient information.
+The `PayChanguWebhookEvent` model exposes the event type, transaction details, payment flow, payment method, and relevant customer or recipient information.
 
 The SDK recognizes these event types:
 
-Event type
+| Event type | Payment flow | Transaction identifier |
+|---|---|---|
+| `checkout.payment` | `Checkout` | Merchant transaction reference (`tx_ref`) |
+| `api.charge.payment` | `DirectCharge` | PayChangu charge identifier (`charge_id`) |
+| `api.payout` | `Payout` | PayChangu charge identifier (`charge_id`) |
 
-Payment flow
+You can use the derived `PaymentFlow`, `PaymentMethod`, and `TransactionIdentifier` properties to determine how to handle an event.
 
-Transaction identifier
-
-checkout.payment
-
-Checkout
-
-Merchant transaction reference (tx_ref)
-
-api.charge.payment
-
-DirectCharge
-
-PayChangu charge identifier (charge_id)
-
-api.payout
-
-Payout
-
-PayChangu charge identifier (charge_id)
-
-You can use the derived PaymentFlow, PaymentMethod, and TransactionIdentifier properties to determine how to handle an event.
-
+```csharp
 switch (webhookEvent.PaymentFlow)
 {
     case PayChanguPaymentFlow.Checkout:
@@ -385,10 +277,11 @@ switch (webhookEvent.PaymentFlow)
         // Handle an unrecognized event type.
         break;
 }
+```
 
-TransactionIdentifier returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to VerifyPaymentAsync.
+`TransactionIdentifier` returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to `VerifyPaymentAsync`.
 
-Important: Signature validation confirms that the webhook payload was signed using the configured webhook secret. Your application should still process transaction statuses appropriately, verify payments where applicable, and avoid treating an initiation or pending notification as a completed transaction.
+**Important:** Signature validation confirms that the webhook payload was signed using the configured webhook secret. Your application should still process transaction statuses appropriately, verify payments where applicable, and avoid treating an initiation or pending notification as a completed transaction.
 
 ## License
 
