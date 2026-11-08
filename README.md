@@ -847,62 +847,79 @@ Configure your application's publicly accessible webhook endpoint in the PayChan
 
 PayChangu.NET provides `IPayChanguWebhookService` to validate webhook signatures and deserialize incoming notifications into a strongly typed `PayChanguWebhookEvent`.
 
-### Validating and parsing a webhook
-
-Always validate the signature against the original, unmodified request body before processing the event.
+When registering the SDK, configure both your API secret key and webhook secret:
 
 ```csharp
-using System.IO;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
-using PayChangu.NET.Models;
-
-public class PayChanguWebhookController : ControllerBase
+builder.Services.AddPayChangu(options =>
 {
-    private readonly IPayChanguWebhookService _webhookService;
-
-    public PayChanguWebhookController(
-        IPayChanguWebhookService webhookService)
-    {
-        _webhookService = webhookService;
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ReceiveWebhook()
-    {
-        using var reader = new StreamReader(Request.Body);
-        var payload = await reader.ReadToEndAsync();
-
-        var signature = Request.Headers["Signature"].ToString();
-
-        if (!_webhookService.VerifySignature(payload, signature))
-        {
-            return Unauthorized();
-        }
-
-        PayChanguWebhookEvent webhookEvent;
-
-        try
-        {
-            webhookEvent = _webhookService.ParseWebhook(payload);
-        }
-        catch (ArgumentException)
-        {
-            return BadRequest();
-        }
-        catch (JsonException)
-        {
-            return BadRequest();
-        }
-
-        // Process the webhook event here.
-
-        return Ok();
-    }
-}
+    options.SecretKey = builder.Configuration["PayChangu:SecretKey"]!;
+    options.WebhookSecret = builder.Configuration["PayChangu:WebhookSecret"];
+});
 ```
 
-The example uses ASP.NET Core controller conventions. Add the appropriate ASP.NET Core namespaces to your controller.
+### Receiving and validating a webhook
+
+Read the raw request body before parsing it. The signature must be verified against the original payload sent by PayChangu.
+
+The following example uses an ASP.NET Core Minimal API endpoint:
+
+```csharp
+using System.Text;
+using System.Text.Json;
+using PayChangu.NET;
+
+app.MapPost("/v1/webhooks/paychangu", async (
+    HttpRequest request,
+    IPayChanguWebhookService webhookService,
+    CancellationToken cancellationToken) =>
+{
+    if (!request.Headers.TryGetValue("Signature", out var signature))
+    {
+        return Results.Unauthorized();
+    }
+
+    // Allow the request body to be read again if required.
+    request.EnableBuffering();
+
+    using var reader = new StreamReader(
+        request.Body,
+        Encoding.UTF8,
+        leaveOpen: true);
+
+    var payload = await reader.ReadToEndAsync(cancellationToken);
+
+    // Reset the stream position after reading the raw payload.
+    request.Body.Position = 0;
+
+    if (!webhookService.VerifySignature(payload, signature.ToString()))
+    {
+        return Results.Unauthorized();
+    }
+
+    PayChanguWebhookEvent webhookEvent;
+
+    try
+    {
+        // Parse the payload only after its signature has been validated.
+        webhookEvent = webhookService.ParseWebhook(payload);
+    }
+    catch (ArgumentException)
+    {
+        return Results.BadRequest();
+    }
+    catch (JsonException)
+    {
+        return Results.BadRequest();
+    }
+
+    // Process the verified webhook event in your application.
+    // For example, pass it to your payment or order service.
+
+    return Results.Ok();
+});
+```
+
+The example assumes that `WebhookSecret` has been configured during SDK registration. The SDK's webhook service uses that configured secret; you do not need to retrieve the secret or implement HMAC signature verification yourself.
 
 ### Handling webhook events
 
