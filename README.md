@@ -2,19 +2,32 @@
 
 A .NET SDK for integrating with the [PayChangu](https://paychangu.com/) payment gateway.
 
-PayChangu.NET provides a simple, typed interface for interacting with PayChangu APIs from .NET applications.
+PayChangu.NET provides a strongly typed, asynchronous interface for interacting with PayChangu APIs from .NET applications. It simplifies payment initiation, transaction verification, direct charges, and payouts through a reusable client with built-in dependency injection support.
 
 ## Features
 
 - Standard Checkout payment initiation.
+- Mobile Money Direct Charge initiation and transaction details retrieval.
+- Bank Transfer Direct Charge initiation and transaction details retrieval.
+- Card Direct Charge initiation, verification, and refunds.
+- Payment verification across supported payment flows.
+- Mobile Money payout initiation.
+- Bank payout initiation and transaction details retrieval.
+- Retrieval of supported Mobile Money operators.
+- Retrieval of supported banks and payout providers.
+- Wallet balance retrieval.
+- Paginated bank payout transaction retrieval.
 - Strongly typed request and response models.
-- Dependency injection support.
+- Dependency injection support through `IHttpClientFactory`.
 - Configurable API base URL.
-- Cancellation token support.
-- Typed exceptions for API errors.
-- Built on `HttpClient` and `System.Text.Json`.
+- Bearer token authentication.
+- Asynchronous operations with cancellation token support.
+- Standardized API response handling.
+- Webhook signature validation and event parsing.
 
 ## Installation
+
+Once the package is published, install it using the .NET CLI:
 
 ```bash
 dotnet add package PayChangu.NET
@@ -22,7 +35,9 @@ dotnet add package PayChangu.NET
 
 ## Configuration
 
-Register the client using dependency injection:
+Register PayChangu.NET with your application's dependency injection container using `AddPayChangu`.
+
+The PayChangu secret key is required. The API base URL defaults to `https://api.paychangu.com/`.
 
 ```csharp
 builder.Services.AddPayChangu(options =>
@@ -31,7 +46,17 @@ builder.Services.AddPayChangu(options =>
 });
 ```
 
-You can also configure a custom API base URL:
+If you intend to process webhooks, configure the webhook secret as well:
+
+```csharp
+builder.Services.AddPayChangu(options =>
+{
+    options.SecretKey = builder.Configuration["PayChangu:SecretKey"]!;
+    options.WebhookSecret = builder.Configuration["PayChangu:WebhookSecret"];
+});
+```
+
+To override the default API base URL:
 
 ```csharp
 builder.Services.AddPayChangu(options =>
@@ -41,87 +66,130 @@ builder.Services.AddPayChangu(options =>
 });
 ```
 
-## Initiating a payment
+### HTTP client configuration
 
-Inject `IPayChanguClient` into your service or application class:
+`AddPayChangu` accepts an optional `configureHttpClient` action. Use it when you need to customize the underlying `HttpClient` configuration.
 
 ```csharp
-public class PaymentService
-{
-    private readonly IPayChanguClient _payChanguClient;
-
-    public PaymentService(IPayChanguClient payChanguClient)
+builder.Services.AddPayChangu(
+    options =>
     {
-        _payChanguClient = payChanguClient;
+        options.SecretKey = builder.Configuration["PayChangu:SecretKey"]!;
+    },
+    httpClient =>
+    {
+        // Add any required HttpClient configuration here.
+    });
+```
+
+The SDK automatically configures Bearer token authentication and the JSON `Accept` header.
+
+### Dependency injection
+
+Registration provides the following services:
+
+- `IPayChanguClient` — communicates with the PayChangu API.
+- `IPayChanguWebhookService` — validates webhook signatures and parses webhook events. A webhook secret must be configured when using this service.
+
+Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
+
+## Webhooks
+
+PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
+
+PayChangu.NET provides `IPayChanguWebhookService` to validate webhook signatures and deserialize incoming notifications into a strongly typed `PayChanguWebhookEvent`.
+
+### Validating and parsing a webhook
+
+Always validate the signature against the original, unmodified request body before processing the event.
+
+```csharp
+public class PayChanguWebhookController : ControllerBase
+{
+    private readonly IPayChanguWebhookService _webhookService;
+
+    public PayChanguWebhookController(
+        IPayChanguWebhookService webhookService)
+    {
+        _webhookService = webhookService;
     }
 
-    public async Task<PaymentResponse> InitiatePaymentAsync()
+    [HttpPost]
+    public async Task<IActionResult> ReceiveWebhook()
     {
-        var request = new PaymentRequest
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync();
+
+        var signature = Request.Headers["Signature"].ToString();
+
+        if (!_webhookService.VerifySignature(payload, signature))
         {
-            Amount = 5000,
-            Currency = "MWK",
-            Email = "customer@example.com",
-            FirstName = "John",
-            LastName = "Banda",
-            CallbackUrl = "https://example.com/callback",
-            ReturnUrl = "https://example.com/return",
-            TransactionReference = Guid.NewGuid().ToString(),
-            Customization = new PaymentCustomization
-            {
-                Title = "Product Purchase",
-                Description = "Payment for your purchase"
-            },
-            Meta = new PaymentMeta
-            {
-                Uuid = Guid.NewGuid().ToString(),
-                Response = "Payment metadata"
-            }
-        };
+            return Unauthorized();
+        }
 
-        return await _payChanguClient.InitiatePaymentAsync(request);
+        PayChanguWebhookEvent webhookEvent;
+
+        try
+        {
+            webhookEvent = _webhookService.ParseWebhook(payload);
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest();
+        }
+        catch (JsonException)
+        {
+            return BadRequest();
+        }
+
+        // Process the webhook event here.
+
+        return Ok();
     }
 }
 ```
 
-The returned `PaymentResponse` contains the checkout URL. Redirect the customer to that URL to complete payment.
+The example uses ASP.NET Core controller conventions. Add the appropriate `System.IO`, `System.Text.Json`, and ASP.NET Core namespaces to your controller.
 
-## Error handling
+### Handling webhook events
 
-The SDK throws `PayChanguException` when PayChangu returns an unsuccessful HTTP response or an invalid response.
+The `PayChanguWebhookEvent` model exposes the event type, transaction details, payment flow, payment method, and relevant customer or recipient information.
+
+The SDK recognizes these event types:
+
+| Event type | Payment flow | Transaction identifier |
+|---|---|---|
+| `checkout.payment` | `Checkout` | Merchant transaction reference (`tx_ref`) |
+| `api.charge.payment` | `DirectCharge` | PayChangu charge identifier (`charge_id`) |
+| `api.payout` | `Payout` | PayChangu charge identifier (`charge_id`) |
+
+You can use the derived `PaymentFlow`, `PaymentMethod`, and `TransactionIdentifier` properties to determine how to handle an event.
 
 ```csharp
-try
+switch (webhookEvent.PaymentFlow)
 {
-    var response = await _payChanguClient.InitiatePaymentAsync(request);
+    case PayChanguPaymentFlow.Checkout:
+    case PayChanguPaymentFlow.DirectCharge:
+        var transactionIdentifier = webhookEvent.TransactionIdentifier;
+        var paymentMethod = webhookEvent.PaymentMethod;
 
-    var checkoutUrl = response.Data.CheckoutUrl;
-}
-catch (PayChanguException ex)
-{
-    // Handle PayChangu API errors.
-    Console.WriteLine(ex.Message);
+        // Handle or verify the payment.
+        break;
+
+    case PayChanguPaymentFlow.Payout:
+        // Handle the payout notification.
+        break;
+
+    default:
+        // Handle an unrecognized event type.
+        break;
 }
 ```
 
-## Cancellation
+`TransactionIdentifier` returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to `VerifyPaymentAsync`.
 
-All asynchronous API operations support cancellation tokens.
-
-```csharp
-var response = await _payChanguClient.InitiatePaymentAsync(
-    request,
-    cancellationToken);
-```
-
-## Current API support
-
-| Feature | Availability |
-|---|---|
-| Standard Checkout | Available |
-| Transaction verification | Planned |
-| Additional PayChangu operations | Planned |
+**Important:** Signature validation confirms that the webhook payload was signed using the configured webhook secret. Your application should still process transaction statuses appropriately and avoid treating an initiation or pending notification as a completed transaction.
 
 ## License
 
-License information will be added before the first public release.
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
