@@ -2,19 +2,28 @@
 
 A .NET SDK for integrating with the [PayChangu](https://paychangu.com/) payment gateway.
 
-PayChangu.NET provides a simple, typed interface for interacting with PayChangu APIs from .NET applications.
+PayChangu.NET provides a strongly typed, asynchronous interface for interacting with PayChangu APIs from .NET applications. It simplifies payment initiation, transaction verification, direct charges, and payouts through a reusable client with built-in dependency injection support.
 
 ## Features
 
 - Standard Checkout payment initiation.
+- Mobile Money Direct Charge operations.
+- Bank Transfer Direct Charge operations.
+- Card Direct Charge operations, including refunds.
+- Payment verification across supported payment flows.
+- Mobile Money payout initiation and details retrieval.
+- Bank payout initiation and transaction details retrieval.
+- Retrieval of supported Mobile Money operators and payout banks.
 - Strongly typed request and response models.
-- Dependency injection support.
+- Dependency injection support through `IHttpClientFactory`.
 - Configurable API base URL.
-- Cancellation token support.
-- Typed exceptions for API errors.
+- Asynchronous operations with cancellation token support.
+- Standardized API response handling.
 - Built on `HttpClient` and `System.Text.Json`.
 
 ## Installation
+
+Install the package using the .NET CLI:
 
 ```bash
 dotnet add package PayChangu.NET
@@ -22,7 +31,7 @@ dotnet add package PayChangu.NET
 
 ## Configuration
 
-Register the client using dependency injection:
+Register PayChangu.NET with your application's dependency injection container.
 
 ```csharp
 builder.Services.AddPayChangu(options =>
@@ -41,9 +50,11 @@ builder.Services.AddPayChangu(options =>
 });
 ```
 
-## Initiating a payment
+For security, store your PayChangu secret key in configuration or a secure secrets provider rather than hardcoding it in your application.
 
-Inject `IPayChanguClient` into your service or application class:
+## Using the Client
+
+Inject `IPayChanguClient` into your application services or classes that need to communicate with PayChangu.
 
 ```csharp
 public class PaymentService
@@ -54,53 +65,37 @@ public class PaymentService
     {
         _payChanguClient = payChanguClient;
     }
-
-    public async Task<PaymentResponse> InitiatePaymentAsync()
-    {
-        var request = new PaymentRequest
-        {
-            Amount = 5000,
-            Currency = "MWK",
-            Email = "customer@example.com",
-            FirstName = "John",
-            LastName = "Banda",
-            CallbackUrl = "https://example.com/callback",
-            ReturnUrl = "https://example.com/return",
-            TransactionReference = Guid.NewGuid().ToString(),
-            Customization = new PaymentCustomization
-            {
-                Title = "Product Purchase",
-                Description = "Payment for your purchase"
-            },
-            Meta = new PaymentMeta
-            {
-                Uuid = Guid.NewGuid().ToString(),
-                Response = "Payment metadata"
-            }
-        };
-
-        return await _payChanguClient.InitiatePaymentAsync(request);
-    }
 }
 ```
 
-The returned `PaymentResponse` contains the checkout URL. Redirect the customer to that URL to complete payment.
+## API Responses
 
-## Error handling
+API operations return a `PayChanguApiResponse` or `PayChanguApiResponse<T>`, depending on whether the operation returns a response payload.
 
-The SDK throws `PayChanguException` when PayChangu returns an unsuccessful HTTP response or an invalid response.
+The response wrapper provides:
+
+| Property | Description |
+|---|---|
+| `Success` | Indicates whether the API operation was successful. |
+| `StatusCode` | HTTP status code returned by the API, when available. |
+| `ErrorMessage` | Error information when the operation fails. |
+| `Result` | Deserialized response payload for generic responses. |
+| `RawJsonResponse` | Raw response body when available. |
+
+Check the `Success` property before accessing the result:
 
 ```csharp
-try
-{
-    var response = await _payChanguClient.InitiatePaymentAsync(request);
+var response = await _payChanguClient.InitiatePaymentAsync(request);
 
-    var checkoutUrl = response.Data.CheckoutUrl;
-}
-catch (PayChanguException ex)
+if (response.Success)
 {
-    // Handle PayChangu API errors.
-    Console.WriteLine(ex.Message);
+    var payment = response.Result;
+
+    // Continue with the successful response.
+}
+else
+{
+    Console.WriteLine(response.ErrorMessage);
 }
 ```
 
@@ -114,14 +109,8 @@ var response = await _payChanguClient.InitiatePaymentAsync(
     cancellationToken);
 ```
 
-## Current API support
-
-| Feature | Availability |
-|---|---|
-| Standard Checkout | Available |
-| Transaction verification | Planned |
-| Additional PayChangu operations | Planned |
+This allows your application to cancel outstanding HTTP requests when necessary.
 
 ## License
 
-License information will be added before the first public release.
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
