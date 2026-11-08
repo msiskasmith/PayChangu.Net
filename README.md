@@ -23,7 +23,7 @@ PayChangu.NET provides a strongly typed, asynchronous interface for interacting 
 - Bearer token authentication.
 - Asynchronous operations with cancellation token support.
 - Standardized API response handling.
-- Webhook signature validation support.
+- Webhook signature validation and event parsing.
 
 ## Installation
 
@@ -46,7 +46,7 @@ builder.Services.AddPayChangu(options =>
 });
 ```
 
-You can also configure the optional webhook secret:
+If you intend to process webhooks, configure the webhook secret as well:
 
 ```csharp
 builder.Services.AddPayChangu(options =>
@@ -89,9 +89,106 @@ The SDK automatically configures Bearer token authentication and the JSON `Accep
 Registration provides the following services:
 
 - `IPayChanguClient` — communicates with the PayChangu API.
-- `IPayChanguWebhookService` — provides webhook signature validation and related webhook functionality.
+- `IPayChanguWebhookService` — validates webhook signatures and parses webhook events. A webhook secret must be configured when using this service.
 
 Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
+
+## Webhooks
+
+PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
+
+PayChangu.NET provides `IPayChanguWebhookService` to validate webhook signatures and deserialize incoming notifications into a strongly typed `PayChanguWebhookEvent`.
+
+### Validating and parsing a webhook
+
+Always validate the signature against the original, unmodified request body before processing the event.
+
+```csharp
+public class PayChanguWebhookController : ControllerBase
+{
+    private readonly IPayChanguWebhookService _webhookService;
+
+    public PayChanguWebhookController(
+        IPayChanguWebhookService webhookService)
+    {
+        _webhookService = webhookService;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReceiveWebhook()
+    {
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync();
+
+        var signature = Request.Headers["Signature"].ToString();
+
+        if (!_webhookService.VerifySignature(payload, signature))
+        {
+            return Unauthorized();
+        }
+
+        PayChanguWebhookEvent webhookEvent;
+
+        try
+        {
+            webhookEvent = _webhookService.ParseWebhook(payload);
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest();
+        }
+        catch (JsonException)
+        {
+            return BadRequest();
+        }
+
+        // Process the webhook event here.
+
+        return Ok();
+    }
+}
+```
+
+The example uses ASP.NET Core controller conventions. Add the appropriate `System.IO`, `System.Text.Json`, and ASP.NET Core namespaces to your controller.
+
+### Handling webhook events
+
+The `PayChanguWebhookEvent` model exposes the event type, transaction details, payment flow, payment method, and relevant customer or recipient information.
+
+The SDK recognizes these event types:
+
+| Event type | Payment flow | Transaction identifier |
+|---|---|---|
+| `checkout.payment` | `Checkout` | Merchant transaction reference (`tx_ref`) |
+| `api.charge.payment` | `DirectCharge` | PayChangu charge identifier (`charge_id`) |
+| `api.payout` | `Payout` | PayChangu charge identifier (`charge_id`) |
+
+You can use the derived `PaymentFlow`, `PaymentMethod`, and `TransactionIdentifier` properties to determine how to handle an event.
+
+```csharp
+switch (webhookEvent.PaymentFlow)
+{
+    case PayChanguPaymentFlow.Checkout:
+    case PayChanguPaymentFlow.DirectCharge:
+        var transactionIdentifier = webhookEvent.TransactionIdentifier;
+        var paymentMethod = webhookEvent.PaymentMethod;
+
+        // Handle or verify the payment.
+        break;
+
+    case PayChanguPaymentFlow.Payout:
+        // Handle the payout notification.
+        break;
+
+    default:
+        // Handle an unrecognized event type.
+        break;
+}
+```
+
+`TransactionIdentifier` returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to `VerifyPaymentAsync`.
+
+**Important:** Signature validation confirms that the webhook payload was signed using the configured webhook secret. Your application should still process transaction statuses appropriately and avoid treating an initiation or pending notification as a completed transaction.
 
 ## License
 
