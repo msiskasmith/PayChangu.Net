@@ -143,7 +143,7 @@ public interface IPayChanguClient
     /// A response containing the retrieved transaction details.
     /// </returns>
     Task<PayChanguApiResponse<GetMobileMoneyChargeDetailsResponse>>
-        GetMobileMoneyChargeDetailsAsync(
+        GetSingleMobileMoneyChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default);
 
@@ -203,6 +203,51 @@ public interface IPayChanguClient
     Task<PayChanguApiResponse<InitiateBankTransferDirectChargeResponse>> InitiateBankTransferDirectChargeAsync(
         InitiateBankTransferDirectChargeRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Initiates a bank payout request.
+    /// </summary>
+    /// <param name="request">
+    /// The bank payout details.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the HTTP request.
+    /// </param>
+    /// <returns>
+    /// The response indicating whether PayChangu accepted the payout request
+    /// and initiated the payout process. It does not confirm payout completion.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="PayChanguException">
+    /// Thrown when PayChangu returns an unsuccessful HTTP response
+    /// or when the response cannot be deserialized.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is cancelled through the
+    /// <paramref name="cancellationToken"/>.
+    /// </exception>
+    Task<PayChanguApiResponse<InitiateBankPayoutResponse>> InitiateBankPayoutAsync(
+        InitiateBankPayoutRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves the details of a bank payout transaction.
+    /// </summary>
+    /// <param name="chargeId">
+    /// The unique identifier of the bank payout transaction.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests.
+    /// </param>
+    /// <returns>
+    /// The bank payout transaction details.
+    /// </returns>
+    Task<PayChanguApiResponse<GetBankPayoutDetailsResponse>>
+        GetSingleBankPayoutDetailsAsync(
+            string chargeId,
+            CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves the details of a Bank Transfer Direct Charge transaction.
@@ -625,7 +670,7 @@ internal sealed class PayChanguClient : IPayChanguClient
 
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetMobileMoneyChargeDetailsResponse>>
-        GetMobileMoneyChargeDetailsAsync(
+        GetSingleMobileMoneyChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default)
     {
@@ -753,6 +798,56 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
+    public async Task<PayChanguApiResponse<InitiateBankPayoutResponse>>
+        InitiateBankPayoutAsync(
+            InitiateBankPayoutRequest request,
+            CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            PayChanguApiEndpoints.Payout.BankPayout);
+
+        httpRequest.Content = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json");
+
+        return await SendAsync<InitiateBankPayoutResponse>(
+            httpRequest,
+            "Bank Payout initiation",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetBankPayoutDetailsResponse>>
+        GetSingleBankPayoutDetailsAsync(
+            string chargeId,
+            CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            throw new PayChanguException(
+                "The charge ID cannot be null, empty, or whitespace.");
+        }
+
+        var endpoint = PayChanguApiEndpoints.Payout
+            .GetSingleBankPayoutDetails
+            .Replace("{id}", Uri.EscapeDataString(chargeId));
+
+        return await GetAsync<GetBankPayoutDetailsResponse>(
+            endpoint,
+            "Bank Payout details retrieval",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<PayChanguApiResponse> RefundCardChargeAsync(
         string chargeId,
         CancellationToken cancellationToken = default)
@@ -810,7 +905,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             }
 
             var endpoint = PayChanguApiEndpoints.Payout.GetBanks
-                .Replace("{Iso}", Uri.EscapeDataString(currency));
+                .Replace("{iso}", Uri.EscapeDataString(currency));
 
             return await GetAsync<GetSupportedBanksResponse>(
                 endpoint,
@@ -1286,7 +1381,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                     Brand = transaction.Authorization.Brand,
                     Provider = transaction.Authorization.Provider,
                     MobileNumber = transaction.Authorization.MobileNumber,
-                    PayerBankUuid = transaction.Authorization.PayerBankUuid,
+                    PayerBankId = transaction.Authorization.PayerBankId,
                     PayerBank = transaction.Authorization.PayerBank,
                     PayerAccountNumber =
                         transaction.Authorization.PayerAccountNumber,

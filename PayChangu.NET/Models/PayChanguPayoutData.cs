@@ -121,7 +121,7 @@ public sealed class PayChanguPayoutData
     /// Gets or sets the recipient's bank account details, if applicable.
     /// </summary>
     [JsonPropertyName("recipient_account_details")]
-    public PayChanguRecipientAccountDetails? RecipientAccountDetails { get; set; }
+    public BankRecipientAccountDetails? RecipientAccountDetails { get; set; }
 
     /// <summary>
     /// Gets or sets the mobile money operator details, if applicable.
@@ -134,7 +134,7 @@ public sealed class PayChanguPayoutData
 /// <summary>
 /// Represents recipient bank account details included in a payout response or webhook.
 /// </summary>
-public sealed class PayChanguRecipientAccountDetails
+public sealed class BankRecipientAccountDetails
 {
     /// <summary>
     /// Gets or sets the recipient bank name.
@@ -146,7 +146,7 @@ public sealed class PayChanguRecipientAccountDetails
     /// Gets or sets the recipient bank identifier.
     /// </summary>
     [JsonPropertyName("bank_uuid")]
-    public string? BankId { get; set; }
+    public Guid BankId { get; set; }
 
     /// <summary>
     /// Gets or sets the recipient account name.

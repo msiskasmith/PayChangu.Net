@@ -40,9 +40,9 @@ internal sealed class PayChanguApiEndpoints
         internal const string MobileMoneyPayout = "mobile-money/payouts/initialize";
         internal const string GetSingleMobileMoneyPayoutDetails = "mobile-money/payments/{id}/details";
 
-        internal const string GetBanks = "direct-charge/payouts/supported-banks?currency={Iso}";
+        internal const string GetBanks = "direct-charge/payouts/supported-banks?currency={iso}";
         internal const string BankPayout = "direct-charge/payouts/initialize";
-        internal const string GetSingleBankPayoutDetails = "direct-charge/payouts/{id}";
+        internal const string GetSingleBankPayoutDetails = "direct-charge/payouts/{id}/details";
         internal const string GetAllBankPayoutDetails = "direct-charge/payouts";
     }
 

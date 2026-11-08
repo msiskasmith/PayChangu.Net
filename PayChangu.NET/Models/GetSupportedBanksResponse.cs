@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -36,7 +37,7 @@ public sealed class SupportedBank
     /// Gets or sets the provider UUID.
     /// </summary>
     [JsonPropertyName("uuid")]
-    public string Uuid { get; set; } = null!;
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the provider name.

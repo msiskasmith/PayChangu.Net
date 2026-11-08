@@ -205,7 +205,8 @@ public sealed class PayChanguTransactionAuthorization
     /// Gets or sets the payer's bank identifier, when applicable.
     /// </summary>
     [JsonPropertyName("payer_bank_uuid")]
-    public string? PayerBankUuid { get; set; }
+    [JsonConverter(typeof(PayChanguGuidJsonConverter))]
+    public Guid PayerBankId { get; set; }
 
     /// <summary>
     /// Gets or sets the payer's bank name, when applicable.

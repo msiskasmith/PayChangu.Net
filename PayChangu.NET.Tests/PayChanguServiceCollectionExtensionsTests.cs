@@ -77,7 +77,7 @@ public sealed class PayChanguServiceCollectionExtensionsTests
             },
             Meta = new Models.PaymentMeta
             {
-                Uuid = "test-uuid",
+                Id = Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
                 Response = "test-response"
             }
         });

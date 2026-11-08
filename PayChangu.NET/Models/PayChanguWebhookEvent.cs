@@ -128,7 +128,7 @@ public sealed class PayChanguWebhookEvent
     /// Gets or sets the recipient bank account details for a payout.
     /// </summary>
     [JsonPropertyName("recipient_account_details")]
-    public PayChanguRecipientAccountDetails? RecipientAccountDetails { get; set; }
+    public BankRecipientAccountDetails? RecipientAccountDetails { get; set; }
 
     /// <summary>
     /// Gets or sets the mobile money operator details, if applicable.
@@ -290,7 +290,7 @@ public sealed class PayChanguBankPaymentDetails
     /// Gets or sets the payer bank identifier.
     /// </summary>
     [JsonPropertyName("payer_bank_uuid")]
-    public string PayerBankUuid { get; set; } = null!;
+    public Guid PayerBankId { get; set; }
 
     /// <summary>
     /// Gets or sets the payer bank name.

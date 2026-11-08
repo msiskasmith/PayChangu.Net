@@ -1,4 +1,5 @@
 ﻿using PayChangu.NET.Json.Converters;
+using System;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -129,7 +130,8 @@ public sealed class PaymentMeta
     /// Gets or sets an optional UUID associated with the transaction.
     /// </summary>
     [JsonPropertyName("uuid")]
-    public string? Uuid { get; set; }
+    [JsonConverter(typeof(PayChanguGuidJsonConverter))]
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets an optional response value associated with the transaction.

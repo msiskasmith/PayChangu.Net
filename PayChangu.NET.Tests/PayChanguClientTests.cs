@@ -52,7 +52,7 @@ public sealed class PayChanguClientTests
             },
             Meta = new PaymentMeta
             {
-                Uuid = "test-uuid",
+                Id = Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
                 Response = "test-response"
             }
         };
@@ -1048,7 +1048,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetMobileMoneyChargeDetailsAsync(chargeId);
+        var result = await client.GetSingleMobileMoneyChargeDetailsAsync(chargeId);
 
         // Assert
         Assert.True(result.Success);
@@ -1156,7 +1156,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetMobileMoneyChargeDetailsAsync(chargeId);
+        await client.GetSingleMobileMoneyChargeDetailsAsync(chargeId);
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -1194,7 +1194,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetMobileMoneyChargeDetailsAsync("74536");
+        var result = await client.GetSingleMobileMoneyChargeDetailsAsync("74536");
 
         // Assert
         Assert.False(result.Success);
@@ -1225,7 +1225,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetMobileMoneyChargeDetailsAsync("74536");
+        var result = await client.GetSingleMobileMoneyChargeDetailsAsync("74536");
 
         // Assert
         Assert.False(result.Success);
@@ -1253,7 +1253,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetMobileMoneyChargeDetailsAsync(chargeId!));
+            () => client.GetSingleMobileMoneyChargeDetailsAsync(chargeId!));
 
         Assert.Null(handler.RequestUri);
     }
@@ -1808,8 +1808,8 @@ public sealed class PayChanguClientTests
         Assert.NotNull(transaction.Authorization);
         Assert.Equal("Mobile Bank Transfer", transaction.Authorization.Channel);
         Assert.Equal(
-            "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
-            transaction.Authorization.PayerBankUuid);
+            Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
+            transaction.Authorization.PayerBankId);
         Assert.Equal(
             "National Bank of Malawi",
             transaction.Authorization.PayerBank);
@@ -3036,6 +3036,132 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task InitiateBankPayoutAsync_ReturnsResponse_WhenRequestSucceeds()
+    {
+        // Arrange
+        const string json = """
+    {
+        "status": "success",
+        "message": "Payout request submitted successfully.",
+        "data": {
+            "transaction": {
+                "charge_id": "TRX683932Ygis898jjnyghvtgu",
+                "ref_id": "97073812876",
+                "trans_id": null,
+                "currency": "MK",
+                "amount": 3000,
+                "first_name": null,
+                "last_name": null,
+                "email": null,
+                "type": "API Payout",
+                "trace_id": null,
+                "status": "pending",
+                "mobile": "0",
+                "attempts": 1,
+                "mode": "live",
+                "created_at": "2025-01-23T17:03:28.000000Z",
+                "completed_at": null,
+                "event_type": "api.payout",
+                "transaction_charges": {
+                    "currency": "MK",
+                    "amount": "0"
+                },
+                "recipient_account_details": {
+                    "bank_uuid": "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
+                    "bank_name": "National Bank of Malawi",
+                    "account_name": "Madalitso Kamwendo",
+                    "account_number": "1000000010"
+                }
+            }
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        var request = new InitiateBankPayoutRequest
+        {
+            BankId = Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
+            Amount = 3000m,
+            ChargeId = "TRX683932Ygis898jjnyghvtgu",
+            BankAccountName = "Madalitso Kamwendo",
+            BankAccountNumber = "1000000010"
+        };
+
+        // Act
+        var result = await client.InitiateBankPayoutAsync(request);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+        Assert.Equal("success", result.Result.Status);
+        Assert.Equal(
+            "Payout request submitted successfully.",
+            result.Result.Message);
+
+        Assert.NotNull(result.Result.Data);
+
+        var transaction = result.Result.Data.Transaction;
+
+        Assert.Equal("TRX683932Ygis898jjnyghvtgu", transaction.ChargeId);
+        Assert.Equal("97073812876", transaction.ReferenceId);
+        Assert.Null(transaction.TransactionId);
+
+        Assert.Equal("MK", transaction.Currency);
+        Assert.Equal(3000m, transaction.Amount);
+
+        Assert.Null(transaction.FirstName);
+        Assert.Null(transaction.LastName);
+        Assert.Null(transaction.Email);
+
+        Assert.Equal("API Payout", transaction.Type);
+        Assert.Null(transaction.TraceId);
+        Assert.Equal("pending", transaction.Status);
+        Assert.Equal("0", transaction.Mobile);
+        Assert.Equal(1, transaction.Attempts);
+        Assert.Equal("live", transaction.Mode);
+        Assert.Equal("api.payout", transaction.EventType);
+
+        Assert.Equal(
+            DateTimeOffset.Parse("2025-01-23T17:03:28.000000Z"),
+            transaction.CreatedAt);
+
+        Assert.Null(transaction.CompletedAt);
+
+        Assert.NotNull(transaction.TransactionCharges);
+        Assert.Equal("MK", transaction.TransactionCharges.Currency);
+        Assert.Equal(0m, transaction.TransactionCharges.Amount);
+
+        Assert.NotNull(transaction.RecipientAccountDetails);
+        Assert.Equal(
+            Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
+            transaction.RecipientAccountDetails.BankId);
+        Assert.Equal(
+            "National Bank of Malawi",
+            transaction.RecipientAccountDetails.BankName);
+        Assert.Equal(
+            "Madalitso Kamwendo",
+            transaction.RecipientAccountDetails.AccountName);
+        Assert.Equal(
+            "1000000010",
+            transaction.RecipientAccountDetails.AccountNumber);
+    }
+
+    [Fact]
     public async Task GetBalanceAsync_ReturnsBalance_WhenRequestSucceeds()
     {
         // Arrange
@@ -3297,8 +3423,8 @@ public sealed class PayChanguClientTests
         Assert.Equal(10, response.Result.Data.Count);
 
         Assert.Equal(
-            "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
-            response.Result.Data[0].Uuid);
+            Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
+            response.Result.Data[0].Id);
 
         Assert.Equal(
             "National Bank of Malawi",
@@ -3391,5 +3517,281 @@ public sealed class PayChanguClientTests
         // Assert
         Assert.Equal("currency", exception.ParamName);
         Assert.Null(handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task GetBankPayoutDetailsAsync_ReturnsResponse_WhenRequestSucceeds()
+    {
+        // Arrange
+        const string json = """
+    {
+        "status": "successful",
+        "message": "Transaction details retrieved successfully",
+        "data": {
+            "charge_id": "TRX683932Ygis898jjnyghvtguuu",
+            "ref_id": "33722634970",
+            "trans_id": null,
+            "currency": "MK",
+            "amount": 1000,
+            "first_name": null,
+            "last_name": null,
+            "email": null,
+            "type": "API Payout",
+            "trace_id": null,
+            "status": "failed",
+            "mobile": "0",
+            "attempts": 1,
+            "mode": "live",
+            "created_at": "2025-01-23T22:46:06.000000Z",
+            "completed_at": null,
+            "event_type": "api.payout",
+            "transaction_charges": {
+                "currency": "MK",
+                "amount": "0"
+            },
+            "recipient_account_details": {
+                "bank_uuid": "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
+                "bank_name": "National Bank of Malawi",
+                "account_name": "Madalitso Kamwendo",
+                "account_number": "1000000010"
+            }
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        const string chargeId = "TRX683932Ygis898jjnyghvtguuu";
+
+        // Act
+        var result = await client.GetSingleBankPayoutDetailsAsync(chargeId);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+        Assert.Equal("successful", result.Result.Status);
+        Assert.Equal(
+            "Transaction details retrieved successfully",
+            result.Result.Message);
+
+        var transaction = result.Result.Data;
+
+        Assert.Equal(chargeId, transaction.ChargeId);
+        Assert.Equal("33722634970", transaction.ReferenceId);
+        Assert.Null(transaction.TransactionId);
+
+        Assert.Equal("MK", transaction.Currency);
+        Assert.Equal(1000m, transaction.Amount);
+
+        Assert.Null(transaction.FirstName);
+        Assert.Null(transaction.LastName);
+        Assert.Null(transaction.Email);
+
+        Assert.Equal("API Payout", transaction.Type);
+        Assert.Null(transaction.TraceId);
+        Assert.Equal("failed", transaction.Status);
+        Assert.Equal("0", transaction.Mobile);
+        Assert.Equal(1, transaction.Attempts);
+        Assert.Equal("live", transaction.Mode);
+        Assert.Equal("api.payout", transaction.EventType);
+
+        Assert.Equal(
+            DateTimeOffset.Parse("2025-01-23T22:46:06.000000Z"),
+            transaction.CreatedAt);
+
+        Assert.Null(transaction.CompletedAt);
+
+        Assert.NotNull(transaction.TransactionCharges);
+        Assert.Equal("MK", transaction.TransactionCharges.Currency);
+        Assert.Equal(0m, transaction.TransactionCharges.Amount);
+
+        Assert.NotNull(transaction.RecipientAccountDetails);
+        Assert.Equal(
+            Guid.Parse("82310dd1-ec9b-4fe7-a32c-2f262ef08681"),
+            transaction.RecipientAccountDetails.BankId);
+        Assert.Equal(
+            "National Bank of Malawi",
+            transaction.RecipientAccountDetails.BankName);
+        Assert.Equal(
+            "Madalitso Kamwendo",
+            transaction.RecipientAccountDetails.AccountName);
+        Assert.Equal(
+            "1000000010",
+            transaction.RecipientAccountDetails.AccountNumber);
+    }
+
+    [Fact]
+    public async Task GetBankPayoutDetailsAsync_UsesCorrectEndpoint()
+    {
+        // Arrange
+        const string chargeId = "TRX683932Ygis898jjnyghvtguuu";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"successful","message":"Success","data":{}}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.GetSingleBankPayoutDetailsAsync(chargeId);
+
+        // Assert
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+        Assert.Equal(
+            new Uri($"{BaseUrl}direct-charge/payouts/{chargeId}/details"),
+            handler.RequestUri);
+    }
+
+    [Fact]
+    public async Task GetBankPayoutDetailsAsync_WhenChargeIdContainsSpecialCharacters_EscapesChargeId()
+    {
+        // Arrange
+        const string chargeId = "TRX/charge 001";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"successful","message":"Success","data":{}}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.GetSingleBankPayoutDetailsAsync(chargeId);
+
+        // Assert
+        Assert.Equal(
+            new Uri($"{BaseUrl}direct-charge/payouts/TRX%2Fcharge%20001/details"),
+            handler.RequestUri);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    public async Task GetBankPayoutDetailsAsync_WhenChargeIdIsInvalid_ThrowsPayChanguException(
+    string? chargeId)
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PayChanguException>(
+            () => client.GetSingleBankPayoutDetailsAsync(chargeId!));
+
+        // Assert
+        Assert.NotNull(exception);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task GetBankPayoutDetailsAsync_ReturnsFailure_WhenRequestFails()
+    {
+        // Arrange
+        const string json = """{"message":"Transaction not found"}""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetSingleBankPayoutDetailsAsync("TRX123456");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+        Assert.Equal("Transaction not found", result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task GetBankPayoutDetailsAsync_ReturnsFailure_WhenResponseContainsInvalidJson()
+    {
+        // Arrange
+        const string json = """{"status":"successful","data":""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.GetSingleBankPayoutDetailsAsync("TRX123456");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public async Task GetBankPayoutDetailsAsync_UsesBearerAuthentication()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"status":"successful","message":"Success","data":{}}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.GetSingleBankPayoutDetailsAsync("TRX123456");
+
+        // Assert
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal(SecretKey, handler.AuthorizationParameter);
     }
 }

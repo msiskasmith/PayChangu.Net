@@ -199,7 +199,7 @@ public sealed class VerificationAuthorization
     /// <summary>
     /// Gets or sets the payer's bank identifier, when applicable.
     /// </summary>
-    public string? PayerBankUuid { get; set; }
+    public Guid PayerBankId { get; set; }
 
     /// <summary>
     /// Gets or sets the payer's bank name, when applicable.
