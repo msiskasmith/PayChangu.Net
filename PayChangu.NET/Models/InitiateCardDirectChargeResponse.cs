@@ -5,7 +5,7 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents the response returned when initiating a card charge.
 /// </summary>
-public sealed class InitiateCardChargeResponse
+public sealed class InitiateCardDirectChargeResponse
 {
     /// <summary>
     /// Gets or sets a value indicating whether the charge request succeeded.

@@ -157,8 +157,8 @@ public sealed class PayChanguTransactionCharges
 }
 
 /// <summary>
-/// Represents the payment authorization details of a PayChangu
-/// Direct Charge transaction, including payment-method-specific details.
+/// Represents the authorization details of a PayChangu transaction,
+/// including payment-method-specific details.
 /// </summary>
 public sealed class PayChanguTransactionAuthorization
 {

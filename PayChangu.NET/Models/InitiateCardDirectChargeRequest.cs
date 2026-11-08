@@ -5,7 +5,7 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents a request to initiate a card charge through PayChangu.
 /// </summary>
-public sealed class InitiateCardChargeRequest
+public sealed class InitiateCardDirectChargeRequest
 {
     /// <summary>
     /// Gets or sets the card number.

@@ -147,6 +147,35 @@ public interface IPayChanguClient
             CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Initiates a mobile money payout.
+    /// </summary>
+    /// <param name="request">
+    /// The mobile money payout details, including the recipient's mobile
+    /// number, mobile money operator, amount, and unique charge identifier.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the HTTP request.
+    /// </param>
+    /// <returns>
+    /// The response containing the initiated payout transaction details.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is cancelled through the
+    /// <paramref name="cancellationToken"/>.
+    /// </exception>
+    /// <remarks>
+    /// The <c>TransactionStatus</c> request property is intended exclusively
+    /// for sandbox testing and must be omitted in production.
+    /// </remarks>
+    Task<PayChanguApiResponse<InitiateMobileMoneyPayoutResponse>>
+        InitiateMobileMoneyPayoutAsync(
+            InitiateMobileMoneyPayoutRequest request,
+            CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Initiates a direct bank transfer payment request.
     /// </summary>
     /// <param name="request">
@@ -209,8 +238,8 @@ public interface IPayChanguClient
     /// Thrown when the operation is cancelled through the
     /// <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<PayChanguApiResponse<InitiateCardChargeResponse>> InitiateCardChargeAsync(
-        InitiateCardChargeRequest request,
+    Task<PayChanguApiResponse<InitiateCardDirectChargeResponse>> InitiateCardChargeAsync(
+        InitiateCardDirectChargeRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -603,6 +632,34 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
+    public async Task<PayChanguApiResponse<InitiateMobileMoneyPayoutResponse>>
+        InitiateMobileMoneyPayoutAsync(
+            InitiateMobileMoneyPayoutRequest request,
+            CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            PayChanguApiEndpoints.Payout.MobileMoneyPayout);
+
+        httpRequest.Content = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json");
+
+        return await SendAsync<InitiateMobileMoneyPayoutResponse>(
+            httpRequest,
+            "Mobile Money Payout initiation",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<PayChanguApiResponse<InitiateBankTransferDirectChargeResponse>>
         InitiateBankTransferDirectChargeAsync(
             InitiateBankTransferDirectChargeRequest request,
@@ -654,9 +711,9 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<PayChanguApiResponse<InitiateCardChargeResponse>>
+    public async Task<PayChanguApiResponse<InitiateCardDirectChargeResponse>>
         InitiateCardChargeAsync(
-            InitiateCardChargeRequest request,
+            InitiateCardDirectChargeRequest request,
             CancellationToken cancellationToken = default)
     {
         if (request == null)
@@ -675,7 +732,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             Encoding.UTF8,
             "application/json");
 
-        return await SendAsync<InitiateCardChargeResponse>(
+        return await SendAsync<InitiateCardDirectChargeResponse>(
             httpRequest,
             "Card Direct Charge initiation",
             cancellationToken);
