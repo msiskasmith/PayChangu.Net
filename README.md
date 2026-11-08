@@ -397,6 +397,120 @@ if (!verificationResponse.Success ||
 
 **Important:** Always verify the transaction and confirm its final status before fulfilling an order. Do not treat the initiation response or the generated bank account details as proof of payment.
 
+## Card Direct Charge
+
+PayChangu.NET supports Card Direct Charge payments, including transactions that require 3-D Secure (3DS) authentication.
+
+### Initiating a Card Direct Charge
+
+Create an `InitiateCardDirectChargeRequest` and pass it to `InitiateCardChargeAsync`.
+
+```csharp
+var chargeId = Guid.NewGuid().ToString();
+
+var request = new InitiateCardDirectChargeRequest
+{
+    CardNumber = cardNumber,
+    Expiry = cardExpiry,
+    Cvv = cardCvv,
+    CardholderName = "John Banda",
+    Amount = 5000m,
+    Currency = "MWK",
+    ChargeId = chargeId,
+    RedirectUrl = "https://example.com/payments/card/return",
+    Email = "customer@example.com"
+};
+
+var response = await _payChanguClient.InitiateCardChargeAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var chargeResponse = response.Result;
+
+if (!chargeResponse.Success)
+{
+    // PayChangu did not accept the card charge.
+    return;
+}
+
+if (chargeResponse.Requires3DSAuth &&
+    !string.IsNullOrWhiteSpace(chargeResponse.ThreeDSAuthLink))
+{
+    // Redirect the customer to complete 3-D Secure authentication.
+    return Redirect(chargeResponse.ThreeDSAuthLink);
+}
+
+// Continue with transaction verification.
+```
+
+The request includes the card details, amount, currency, charge identifier, redirect URL, and optional customer email.
+
+### Handling 3-D Secure authentication
+
+When `Requires3DSAuth` is `true`, redirect the customer to `ThreeDSAuthLink` to complete the authentication process.
+
+PayChangu uses the supplied `RedirectUrl` to return the customer to your application after the authentication process.
+
+If 3DS authentication is not required, proceed directly to transaction verification.
+
+**Important:** A successful initiation response does not confirm that the payment has been completed. Do not fulfil an order based solely on the initiation response or the customer's return to your application.
+
+### Verifying the card transaction
+
+Use `VerifyPaymentAsync` with the charge identifier and the Card Direct Charge payment flow:
+
+```csharp
+var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+    chargeId,
+    PayChanguPaymentFlow.DirectCharge,
+    PayChanguPaymentMethod.Card,
+    cancellationToken);
+
+if (!verificationResponse.Success ||
+    !verificationResponse.Result.IsValid(chargeId, "MWK", 5000m))
+{
+    // The verification request failed or the payment details did not match.
+    return;
+}
+
+// The transaction status, identifier, currency, and amount are valid.
+// Continue with order fulfilment.
+```
+
+The `IsValid` extension method checks the transaction status, identifier, currency, and amount against your expected values.
+
+### Refunding a card transaction
+
+Use `RefundCardChargeAsync` with the charge identifier of the card transaction:
+
+```csharp
+var refundResponse = await _payChanguClient.RefundCardChargeAsync(
+    chargeId,
+    cancellationToken);
+
+if (!refundResponse.Success)
+{
+    // Handle the unsuccessful refund request.
+    // Inspect refundResponse.ErrorMessage and refundResponse.StatusCode.
+    return;
+}
+
+// PayChangu accepted the refund request with HTTP 200.
+```
+
+The SDK considers the refund request successful when PayChangu returns HTTP 200. The response body is not deserialized.
+
+**Important:** A successful refund request response should not automatically be treated as confirmation that the funds have been returned to the customer. Handle the refund according to the applicable PayChangu transaction and reconciliation process.
+
+**Security:** Never log or expose card numbers or CVVs. Handle card details securely and avoid storing sensitive card verification data.
+
 ## Webhooks
 
 PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
