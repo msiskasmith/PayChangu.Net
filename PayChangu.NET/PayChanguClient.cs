@@ -244,9 +244,22 @@ public interface IPayChanguClient
     /// <returns>
     /// The bank payout transaction details.
     /// </returns>
-    Task<PayChanguApiResponse<GetBankPayoutDetailsResponse>>
+    Task<PayChanguApiResponse<GetSingleBankPayoutDetailsResponse>>
         GetSingleBankPayoutDetailsAsync(
             string chargeId,
+            CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves all bank payout transactions.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests.
+    /// </param>
+    /// <returns>
+    /// The paginated bank payout transactions.
+    /// </returns>
+    Task<PayChanguApiResponse<GetAllBankPayoutDetailsResponse>>
+        GetAllBankPayoutDetailsAsync(
             CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -259,8 +272,8 @@ public interface IPayChanguClient
     /// <returns>
     /// A response containing the retrieved transaction details.
     /// </returns>
-    Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
-        GetBankTransferDirectChargeDetailsAsync(
+    Task<PayChanguApiResponse<GetBankDirectChargeDetailsResponse>>
+        GetSingleBankDirectChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default);
 
@@ -748,8 +761,8 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
-        GetBankTransferDirectChargeDetailsAsync(
+    public async Task<PayChanguApiResponse<GetBankDirectChargeDetailsResponse>>
+        GetSingleBankDirectChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default)
     {
@@ -763,7 +776,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             .GetSingleChargeDetails
             .Replace("{id}", Uri.EscapeDataString(chargeId));
 
-        return await GetAsync<GetBankTransferDirectChargeDetailsResponse>(
+        return await GetAsync<GetBankDirectChargeDetailsResponse>(
             endpoint,
             "bank transfer direct charge details retrieval",
             cancellationToken);
@@ -826,7 +839,7 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<PayChanguApiResponse<GetBankPayoutDetailsResponse>>
+    public async Task<PayChanguApiResponse<GetSingleBankPayoutDetailsResponse>>
         GetSingleBankPayoutDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default)
@@ -841,9 +854,20 @@ internal sealed class PayChanguClient : IPayChanguClient
             .GetSingleBankPayoutDetails
             .Replace("{id}", Uri.EscapeDataString(chargeId));
 
-        return await GetAsync<GetBankPayoutDetailsResponse>(
+        return await GetAsync<GetSingleBankPayoutDetailsResponse>(
             endpoint,
             "Bank Payout details retrieval",
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetAllBankPayoutDetailsResponse>>
+        GetAllBankPayoutDetailsAsync(
+            CancellationToken cancellationToken = default)
+    {
+        return await GetAsync<GetAllBankPayoutDetailsResponse>(
+            PayChanguApiEndpoints.Payout.GetAllBankPayoutDetails,
+            "All Bank Payout details retrieval",
             cancellationToken);
     }
 

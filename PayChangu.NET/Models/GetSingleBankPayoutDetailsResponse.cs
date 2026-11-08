@@ -5,7 +5,7 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents the response returned when retrieving bank payout details.
 /// </summary>
-public sealed class GetBankPayoutDetailsResponse
+public sealed class GetSingleBankPayoutDetailsResponse
 {
     /// <summary>
     /// Gets or sets the API response status.

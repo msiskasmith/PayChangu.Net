@@ -7,7 +7,7 @@ namespace PayChangu.NET.Models;
 /// Represents the response returned when retrieving the details
 /// of a PayChangu Bank Transfer Direct Charge transaction.
 /// </summary>
-public sealed class GetBankTransferDirectChargeDetailsResponse : BasePaychanguResponse
+public sealed class GetBankDirectChargeDetailsResponse : BasePaychanguResponse
 {
     /// <summary>
     /// Gets or sets the retrieved transaction data.
