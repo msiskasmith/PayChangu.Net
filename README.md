@@ -472,6 +472,128 @@ if (!verificationResponse.Success ||
 
 **Important:** Always verify the transaction and confirm its final status before fulfilling an order. Do not treat the initiation response or the generated bank account details as proof of payment.
 
+## Bank Payout
+
+PayChangu.NET supports initiating bank payouts, retrieving individual bank payout details, and retrieving paginated bank payout transactions.
+
+### Initiating a Bank Payout
+
+Create an `InitiateBankPayoutRequest` and pass it to `InitiateBankPayoutAsync`.
+
+The `BankId` property expects the UUID of the recipient's bank or payout provider. You can retrieve supported banks and payout providers using `GetSupportedBanksAsync`.
+
+```csharp
+var request = new InitiateBankPayoutRequest
+{
+    BankId = bankId,
+    Amount = 3000m,
+    ChargeId = Guid.NewGuid().ToString(),
+    BankAccountName = "Madalitso Kamwendo",
+    BankAccountNumber = "1000000010",
+    Email = "recipient@example.com",
+    FirstName = "Madalitso",
+    LastName = "Kamwendo"
+};
+
+var response = await _payChanguClient.InitiateBankPayoutAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data?.Transaction == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var transaction = response.Result.Data.Transaction;
+
+// Access the payout transaction details.
+var chargeId = transaction.ChargeId;
+var referenceId = transaction.ReferenceId;
+var status = transaction.Status;
+var amount = transaction.Amount;
+var currency = transaction.Currency;
+
+// Access the recipient's bank account details.
+var bankName = transaction.RecipientAccountDetails.BankName;
+var accountName = transaction.RecipientAccountDetails.AccountName;
+var accountNumber = transaction.RecipientAccountDetails.AccountNumber;
+```
+
+The request uses `bank_transfer` as its default payout method. The amount is serialized as a JSON string. The recipient's email, first name, and last name are optional.
+
+A successful initiation response means PayChangu accepted the payout request; it does not confirm that the payout has been completed. The returned transaction status can be used to track its progress.
+
+### Retrieving an individual bank payout
+
+Use `GetSingleBankPayoutDetailsAsync` with the payout's charge identifier to retrieve its transaction details.
+
+```csharp
+var detailsResponse = await _payChanguClient.GetSingleBankPayoutDetailsAsync(
+    chargeId,
+    cancellationToken);
+
+if (!detailsResponse.Success || detailsResponse.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect detailsResponse.ErrorMessage and detailsResponse.StatusCode.
+    return;
+}
+
+var transaction = detailsResponse.Result.Data;
+
+var status = transaction.Status;
+var amount = transaction.Amount;
+var currency = transaction.Currency;
+var referenceId = transaction.ReferenceId;
+
+var bankName = transaction.RecipientAccountDetails.BankName;
+var accountName = transaction.RecipientAccountDetails.AccountName;
+var accountNumber = transaction.RecipientAccountDetails.AccountNumber;
+```
+
+The response provides the bank payout transaction, including its status, amount, currency, reference identifiers, transaction charges, and recipient account details.
+
+### Retrieving bank payout transactions
+
+Use `GetAllBankPayoutDetailsAsync` to retrieve bank payout transactions.
+
+```csharp
+var payoutsResponse = await _payChanguClient.GetAllBankPayoutDetailsAsync(
+    cancellationToken);
+
+if (!payoutsResponse.Success || payoutsResponse.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect payoutsResponse.ErrorMessage and payoutsResponse.StatusCode.
+    return;
+}
+
+var pagination = payoutsResponse.Result.Data;
+
+// Access pagination information.
+var currentPage = pagination.CurrentPage;
+var totalPages = pagination.TotalPages;
+var pageSize = pagination.PerPage;
+var nextPageUrl = pagination.NextPageUrl;
+
+// Process transactions returned on the current page.
+foreach (var transaction in pagination.Transactions)
+{
+    var chargeId = transaction.ChargeId;
+    var status = transaction.Status;
+    var amount = transaction.Amount;
+    var bankName = transaction.RecipientAccountDetails.BankName;
+}
+```
+
+The response includes the current page, total pages, page size, next page URL, and the transactions returned for that page.
+
+**Important:** `GetAllBankPayoutDetailsAsync` retrieves only the page returned by the API. It does not automatically fetch subsequent pages. Use the pagination information to manage additional page retrieval separately.
+
+**Payout notifications:** Bank payouts use the `api.payout` webhook event. Configure your webhook endpoint and process payout notifications to track transaction outcomes. Do not treat an accepted payout request or a pending transaction as confirmation that funds have reached the recipient.
+
 ## Card Direct Charge
 
 PayChangu.NET supports Card Direct Charge payments, including transactions that require 3-D Secure (3DS) authentication.
