@@ -7,7 +7,7 @@ namespace PayChangu.NET.Models;
 /// Represents the response returned when verifying a Bank Transfer
 /// Direct Charge transaction.
 /// </summary>
-internal sealed class VerifyBankTransferDirectChargeResponse : BasePaychanguResponse
+internal sealed class ApiVerifyBankTransferDirectChargeResponse : BasePaychanguResponse
 {
     /// <summary>
     /// Gets or sets the response data.

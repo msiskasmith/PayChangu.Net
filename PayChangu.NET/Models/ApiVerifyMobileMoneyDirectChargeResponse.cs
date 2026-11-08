@@ -7,7 +7,7 @@ namespace PayChangu.NET.Models;
 /// Represents the response returned when verifying a Mobile Money
 /// Direct Charge transaction.
 /// </summary>
-internal sealed class VerifyMobileMoneyDirectChargeResponse : BasePaychanguResponse
+internal sealed class ApiVerifyMobileMoneyDirectChargeResponse : BasePaychanguResponse
 {
     /// <summary>
     /// Gets or sets the verified transaction details.

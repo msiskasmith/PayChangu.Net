@@ -10,19 +10,19 @@ namespace PayChangu.NET.Models;
 /// <summary>
 /// Represents the response returned when verifying a PayChangu transaction.
 /// </summary>
-internal sealed class VerifyCheckoutPaymentResponse : BasePaychanguResponse
+internal sealed class ApiVerifyPaymentResponse : BasePaychanguResponse
 {
     /// <summary>
     /// Gets or sets the verified transaction details.
     /// </summary>
     [JsonPropertyName("data")]
-    public CheckoutPaymentVerificationData Data { get; set; } = null!;
+    public ApiPaymentVerificationData Data { get; set; } = null!;
 }
 
 /// <summary>
 /// Contains the details of a verified PayChangu transaction.
 /// </summary>
-internal sealed class CheckoutPaymentVerificationData
+internal sealed class ApiPaymentVerificationData
 {
     /// <summary>
     /// Gets or sets the event type associated with the transaction.
@@ -90,7 +90,7 @@ internal sealed class CheckoutPaymentVerificationData
     /// with the transaction.
     /// </summary>
     [JsonPropertyName("customization")]
-    public CheckoutPaymentVerificationCustomization? Customization { get; set; }
+    public ApiPaymentVerificationCustomization? Customization { get; set; }
 
     /// <summary>
     /// Gets or sets additional metadata associated with the transaction.
@@ -104,19 +104,19 @@ internal sealed class CheckoutPaymentVerificationData
     /// Gets or sets the payment authorization details.
     /// </summary>
     [JsonPropertyName("authorization")]
-    public CheckoutPaymentAuthorization? Authorization { get; set; }
+    public ApiPaymentAuthorization? Authorization { get; set; }
 
     /// <summary>
     /// Gets or sets the customer information associated with the transaction.
     /// </summary>
     [JsonPropertyName("customer")]
-    public CheckoutPaymentCustomer? Customer { get; set; }
+    public ApiPaymentVerificationCustomer? Customer { get; set; }
 
     /// <summary>
     /// Gets or sets the activity logs associated with the transaction.
     /// </summary>
     [JsonPropertyName("logs")]
-    public List<CheckoutPaymentLog> Logs { get; set; } = new();
+    public List<ApiPaymentVerificationLog> Logs { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the date and time when the transaction was created.
@@ -135,7 +135,7 @@ internal sealed class CheckoutPaymentVerificationData
 /// Represents the checkout customization information associated
 /// with a transaction.
 /// </summary>
-internal sealed class CheckoutPaymentVerificationCustomization
+internal sealed class ApiPaymentVerificationCustomization
 {
     /// <summary>
     /// Gets or sets the title displayed during checkout.
@@ -159,7 +159,7 @@ internal sealed class CheckoutPaymentVerificationCustomization
 /// <summary>
 /// Represents the authorization details of a payment transaction.
 /// </summary>
-internal sealed class CheckoutPaymentAuthorization
+internal sealed class ApiPaymentAuthorization
 {
     /// <summary>
     /// Gets or sets the payment channel used to process the transaction.
@@ -209,7 +209,7 @@ internal sealed class CheckoutPaymentAuthorization
 /// <summary>
 /// Represents the customer associated with a payment transaction.
 /// </summary>
-internal sealed class CheckoutPaymentCustomer
+internal sealed class ApiPaymentVerificationCustomer
 {
     /// <summary>
     /// Gets or sets the customer's email address.
@@ -233,7 +233,7 @@ internal sealed class CheckoutPaymentCustomer
 /// <summary>
 /// Represents an activity log entry associated with a transaction.
 /// </summary>
-internal sealed class CheckoutPaymentLog
+internal sealed class ApiPaymentVerificationLog
 {
     /// <summary>
     /// Gets or sets the type of activity recorded in the log entry.

@@ -346,7 +346,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                     "{ref}",
                     Uri.EscapeDataString(transactionIdentifier));
 
-            var response = await GetAsync<VerifyCheckoutPaymentResponse>(
+            var response = await GetAsync<ApiVerifyPaymentResponse>(
                 endpoint,
                 "Checkout verification",
                 cancellationToken);
@@ -354,7 +354,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             // Return the original API failure without attempting to map its data.
             if (!response.Success)
             {
-                return CopyFailure<VerifyCheckoutPaymentResponse, VerifyPaymentResponse>(
+                return CopyFailure<ApiVerifyPaymentResponse, VerifyPaymentResponse>(
                     response);
             }
 
@@ -368,10 +368,11 @@ internal sealed class PayChanguClient : IPayChanguClient
                     response.RawJsonResponse);
             }
 
-            var verification = MapCheckoutVerificationResponse(
+            var verification = MapApiVerificationResponse(
                 response.Result!,
                 transactionIdentifier,
-                paymentMethod);
+                paymentMethod,
+                paymentFlow);
 
             return CreateSuccess(
                 response.StatusCode,
@@ -392,7 +393,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                                 Uri.EscapeDataString(transactionIdentifier));
 
                         var response =
-                            await GetAsync<VerifyMobileMoneyDirectChargeResponse>(
+                            await GetAsync<ApiVerifyMobileMoneyDirectChargeResponse>(
                                 endpoint,
                                 "Mobile Money Direct Charge verification",
                                 cancellationToken);
@@ -401,7 +402,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                         if (!response.Success)
                         {
                             return CopyFailure<
-                                VerifyMobileMoneyDirectChargeResponse,
+                                ApiVerifyMobileMoneyDirectChargeResponse,
                                 VerifyPaymentResponse>(response);
                         }
 
@@ -437,7 +438,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                                 Uri.EscapeDataString(transactionIdentifier));
 
                         var response =
-                            await GetAsync<VerifyBankTransferDirectChargeResponse>(
+                            await GetAsync<ApiVerifyBankTransferDirectChargeResponse>(
                                 endpoint,
                                 "Bank Transfer Direct Charge verification",
                                 cancellationToken);
@@ -446,7 +447,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                         if (!response.Success)
                         {
                             return CopyFailure<
-                                VerifyBankTransferDirectChargeResponse,
+                                ApiVerifyBankTransferDirectChargeResponse,
                                 VerifyPaymentResponse>(response);
                         }
 
@@ -491,10 +492,38 @@ internal sealed class PayChanguClient : IPayChanguClient
                                 "{id}",
                                 Uri.EscapeDataString(transactionIdentifier));
 
-                        return await GetStatusAsync<VerifyPaymentResponse>(
+                        var response = await GetAsync<ApiVerifyPaymentResponse>(
                             endpoint,
                             "Card Direct Charge verification",
                             cancellationToken);
+
+                        // Return the original API failure without attempting to map its data.
+                        if (!response.Success)
+                        {
+                            return CopyFailure<ApiVerifyPaymentResponse, VerifyPaymentResponse>(
+                                response);
+                        }
+
+                        var directCardChargeData = response.Result?.Data;
+
+                        if (directCardChargeData == null)
+                        {
+                            return CreateFailure<VerifyPaymentResponse>(
+                                response.StatusCode,
+                                "PayChangu returned an empty direct card charge verification data payload.",
+                                response.RawJsonResponse);
+                        }
+
+                        var verification = MapApiVerificationResponse(
+                            response.Result!,
+                            transactionIdentifier,
+                            paymentMethod,
+                            paymentFlow);
+
+                        return CreateSuccess(
+                            response.StatusCode,
+                            verification,
+                            response.RawJsonResponse);
                     }
 
                 default:
@@ -1018,17 +1047,19 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <param name="response">The original Checkout verification response.</param>
     /// <param name="transactionIdentifier">The merchant transaction reference.</param>
     /// <param name="paymentMethod">The payment method used for the transaction.</param>
+    /// <param name="paymentFlow"></param>
     /// <returns>The normalized payment verification response.</returns>
-    private static VerifyPaymentResponse MapCheckoutVerificationResponse(
-        VerifyCheckoutPaymentResponse response,
+    private static VerifyPaymentResponse MapApiVerificationResponse(
+        ApiVerifyPaymentResponse response,
         string transactionIdentifier,
-        PayChanguPaymentMethod paymentMethod)
+        PayChanguPaymentMethod paymentMethod,
+        PayChanguPaymentFlow paymentFlow)
     {
         var data = response.Data;
 
         return new VerifyPaymentResponse
         {
-            PaymentFlow = PayChanguPaymentFlow.Checkout,
+            PaymentFlow = paymentFlow,
             PaymentMethod = paymentMethod,
 
             TransactionIdentifier = transactionIdentifier,

@@ -2550,19 +2550,66 @@ public sealed class PayChanguClientTests
         Assert.Null(handler.RequestUri);
     }
 
+
     [Fact]
-    public async Task VerifyPaymentAsync_DirectChargeCard_ReturnsSuccess_WhenRequestSucceeds()
+    public async Task VerifyPaymentAsync_DirectChargeCard_ReturnsNormalizedResponseAndRawJson()
     {
         // Arrange
+        const string chargeId = "charge-001";
+
+        const string json = """
+    {
+        "status": "success",
+        "message": "Payment details retrieved successfully.",
+        "data": {
+            "event_type": "api.charge",
+            "tx_ref": "charge-001",
+            "mode": "live",
+            "type": "Direct API Payment (Card)",
+            "status": "success",
+            "number_of_attempts": 1,
+            "reference": "card-ref-001",
+            "currency": "MWK",
+            "amount": 5000,
+            "charges": 100,
+            "customization": null,
+            "meta": null,
+            "authorization": {
+                "channel": "Card",
+                "card_number": "411111******1111",
+                "expiry": "2030-12",
+                "brand": "VISA",
+                "provider": null,
+                "mobile_number": null,
+                "completed_at": "2026-11-05T10:01:00Z"
+            },
+            "customer": {
+                "email": "john@example.com",
+                "first_name": "John",
+                "last_name": "Banda"
+            },
+            "logs": [],
+            "created_at": "2026-11-05T10:00:00Z",
+            "updated_at": "2026-11-05T10:01:00Z"
+        }
+    }
+    """;
+
         var handler = new FakeHttpMessageHandler(
-            new HttpResponseMessage(HttpStatusCode.OK));
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+            });
 
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
         var result = await client.VerifyPaymentAsync(
-            "charge-001",
+            chargeId,
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.Card);
 
@@ -2570,10 +2617,44 @@ public sealed class PayChanguClientTests
         Assert.True(result.Success);
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         Assert.Null(result.ErrorMessage);
-        Assert.Null(result.Result);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+
+        Assert.Equal(
+            PayChanguPaymentFlow.DirectCharge,
+            result.Result.PaymentFlow);
+
+        Assert.Equal(
+            PayChanguPaymentMethod.Card,
+            result.Result.PaymentMethod);
+
+        Assert.Equal(chargeId, result.Result.TransactionIdentifier);
+        Assert.Equal(chargeId, result.Result.TransactionReference);
+        Assert.Equal("card-ref-001", result.Result.ProviderReference);
+        Assert.Equal("api.charge", result.Result.EventType);
+
+        Assert.Equal("success", result.Result.ApiStatus);
+        Assert.Equal("success", result.Result.Status);
+
+        Assert.Equal(1, result.Result.Attempts);
+        Assert.Equal(5000m, result.Result.Amount);
+        Assert.Equal("MWK", result.Result.Currency);
+
+        Assert.NotNull(result.Result.Charges);
+        Assert.Equal("MWK", result.Result.Charges.Currency);
+        Assert.Equal(100m, result.Result.Charges.Amount);
+
+        Assert.Equal("VISA", result.Result.Authorization!.Brand);
+        Assert.Equal("411111******1111", result.Result.Authorization.CardNumber);
+        Assert.Equal("john@example.com", result.Result.Customer!.Email);
 
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+        Assert.Equal(
+            new Uri($"{BaseUrl}charge-card/verify/{chargeId}"),
+            handler.RequestUri);
     }
+
 
     [Fact]
     public async Task VerifyPaymentAsync_DirectChargeCard_ReturnsFailure_WhenRequestFails()
