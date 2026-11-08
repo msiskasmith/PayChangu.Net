@@ -247,17 +247,18 @@ var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
     cancellationToken);
 
 if (!verificationResponse.Success ||
-    verificationResponse.Result == null)
+    !verificationResponse.Result.IsValid(chargeId, "MWK", 5000m))
 {
-    // Handle the unsuccessful verification request.
+    // The verification request failed or the payment details did not match.
     return;
 }
 
-// Check the actual transaction status before fulfilling the order.
-var paymentStatus = verificationResponse.Result.Status;
+// The transaction status, identifier, currency, and amount are valid.
 ```
 
 The verification response provides normalized transaction details, including the payment status, amount, currency, customer information, and transaction timestamps.
+
+Use the `IsValid` extension method on `VerifyPaymentResponse` to validate the transaction status and ensure the transaction identifier, currency, and amount match your expected values. It returns `false` when the response is null or any of these checks fail.
 
 **Important:** Always verify the transaction before treating a Mobile Money Direct Charge as successfully paid. Do not rely solely on the initiation response.
 
@@ -347,13 +348,13 @@ var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
     cancellationToken);
 
 if (!verificationResponse.Success ||
-    verificationResponse.Result == null)
+    !verificationResponse.Result.IsValid(chargeId, "MWK", 5000m))
 {
-    // Handle the unsuccessful verification request.
+    // The verification request failed or the payment details did not match.
     return;
 }
 
-var paymentStatus = verificationResponse.Result.Status;
+// The transaction status, identifier, currency, and amount are valid.
 \`\`\`
 
 **Important:** Always verify the transaction and confirm its final status before fulfilling an order. Do not treat the initiation response or the generated bank account details as proof of payment.
