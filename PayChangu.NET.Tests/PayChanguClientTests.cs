@@ -1048,7 +1048,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetMobileMoneyDirectChargeDetailsAsync(chargeId);
+        var result = await client.GetMobileMoneyChargeDetailsAsync(chargeId);
 
         // Assert
         Assert.True(result.Success);
@@ -1156,7 +1156,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetMobileMoneyDirectChargeDetailsAsync(chargeId);
+        await client.GetMobileMoneyChargeDetailsAsync(chargeId);
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -1194,7 +1194,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetMobileMoneyDirectChargeDetailsAsync("74536");
+        var result = await client.GetMobileMoneyChargeDetailsAsync("74536");
 
         // Assert
         Assert.False(result.Success);
@@ -1225,7 +1225,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetMobileMoneyDirectChargeDetailsAsync("74536");
+        var result = await client.GetMobileMoneyChargeDetailsAsync("74536");
 
         // Assert
         Assert.False(result.Success);
@@ -1253,7 +1253,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetMobileMoneyDirectChargeDetailsAsync(chargeId!));
+            () => client.GetMobileMoneyChargeDetailsAsync(chargeId!));
 
         Assert.Null(handler.RequestUri);
     }
@@ -3216,5 +3216,180 @@ public sealed class PayChanguClientTests
 
         Assert.Equal("Bearer", handler.AuthorizationScheme);
         Assert.Equal(SecretKey, handler.AuthorizationParameter);
+    }
+
+    [Fact]
+    public async Task GetSupportedBanksAsync_ReturnsResponse_WhenRequestSucceeds()
+    {
+        // Arrange
+        const string json = """
+{
+    "status": "success",
+    "message": "Retrieved successfully.",
+    "data": [
+        {
+            "uuid": "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
+            "name": "National Bank of Malawi"
+        },
+        {
+            "uuid": "87e62436-0553-4fb5-a76d-f27d28420c5b",
+            "name": "Ecobank Malawi Limited"
+        },
+        {
+            "uuid": "b064172a-8a1b-4f7f-aad7-81b036c46c57",
+            "name": "FDH Bank Limited"
+        },
+        {
+            "uuid": "e7447c2c-c147-4907-b194-e087fe8d8585",
+            "name": "Standard Bank Limited"
+        },
+        {
+            "uuid": "236760c9-3045-4a01-990e-497b28d115bb",
+            "name": "Centenary Bank"
+        },
+        {
+            "uuid": "968ac588-3b1f-4d89-81ff-a3d43a599003",
+            "name": "First Capital Limited"
+        },
+        {
+            "uuid": "c759d7b6-ae5c-4a95-814a-79171271897a",
+            "name": "CDH Investment Bank"
+        },
+        {
+            "uuid": "5e9946ae-76ed-43f5-ad59-63e09096006a",
+            "name": "TNM Mpamba"
+        },
+        {
+            "uuid": "e8d5fca0-e5ac-4714-a518-484be9011326",
+            "name": "Airtel Money"
+        },
+        {
+            "uuid": "86007bf5-1b04-49ba-84c1-9758bbf5c996",
+            "name": "NBS Bank Limited"
+        }
+    ]
+}
+""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.GetSupportedBanksAsync("MWK");
+
+        // Assert
+        Assert.True(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(response.Result);
+        Assert.NotNull(response.RawJsonResponse);
+
+        Assert.Equal("success", response.Result.Status);
+        Assert.Equal("Retrieved successfully.", response.Result.Message);
+
+        Assert.NotNull(response.Result.Data);
+        Assert.Equal(10, response.Result.Data.Count);
+
+        Assert.Equal(
+            "82310dd1-ec9b-4fe7-a32c-2f262ef08681",
+            response.Result.Data[0].Uuid);
+
+        Assert.Equal(
+            "National Bank of Malawi",
+            response.Result.Data[0].Name);
+
+        Assert.Equal("TNM Mpamba", response.Result.Data[7].Name);
+        Assert.Equal("Airtel Money", response.Result.Data[8].Name);
+        Assert.Equal("NBS Bank Limited", response.Result.Data[9].Name);
+    }
+
+    [Fact]
+    public async Task GetSupportedBanksAsync_UsesCorrectEndpoint()
+    {
+        // Arrange
+        const string json = """
+{
+    "status": "success",
+    "message": "Retrieved successfully.",
+    "data": []
+}
+""";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        await client.GetSupportedBanksAsync("MWK");
+
+        // Assert
+        Assert.Equal(
+            "https://api.paychangu.com/direct-charge/payouts/supported-banks?currency=MWK",
+            handler.RequestUri?.ToString());
+
+        Assert.Equal(HttpMethod.Get, handler.RequestMethod);
+    }
+
+    [Fact]
+    public async Task GetSupportedBanksAsync_ReturnsFailure_WhenResponseIsInvalidJson()
+    {
+        // Arrange
+        const string json = "{ invalid json }";
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.GetSupportedBanksAsync("MWK");
+
+        // Assert
+        Assert.False(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(response.ErrorMessage);
+        Assert.Contains("Unable to deserialize", response.ErrorMessage);
+        Assert.Null(response.Result);
+        Assert.Equal(json, response.RawJsonResponse);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    public async Task GetSupportedBanksAsync_ThrowsArgumentException_WhenCurrencyIsEmpty(
+    string currency)
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler();
+
+        using var serviceProvider = CreateServiceProvider(handler);
+
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.GetSupportedBanksAsync(currency));
+
+        // Assert
+        Assert.Equal("currency", exception.ParamName);
+        Assert.Null(handler.RequestUri);
     }
 }

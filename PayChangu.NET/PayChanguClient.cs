@@ -142,8 +142,8 @@ public interface IPayChanguClient
     /// <returns>
     /// A response containing the retrieved transaction details.
     /// </returns>
-    Task<PayChanguApiResponse<GetMobileMoneyDirectChargeDetailsResponse>>
-        GetMobileMoneyDirectChargeDetailsAsync(
+    Task<PayChanguApiResponse<GetMobileMoneyChargeDetailsResponse>>
+        GetMobileMoneyChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default);
 
@@ -280,6 +280,18 @@ public interface IPayChanguClient
     Task<PayChanguApiResponse<GetBalanceResponse>> GetBalanceAsync(
         string currency = "MWK",
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves the banks and payout providers supported by PayChangu
+    /// for the specified currency.
+    /// </summary>
+    /// <param name="currency">The currency code used to filter supported providers.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The supported banks and payout providers.</returns>
+    Task<PayChanguApiResponse<GetSupportedBanksResponse>>
+        GetSupportedBanksAsync(
+            string currency = "MWK",
+            CancellationToken cancellationToken = default);
 }
 
 
@@ -612,8 +624,8 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<PayChanguApiResponse<GetMobileMoneyDirectChargeDetailsResponse>>
-        GetMobileMoneyDirectChargeDetailsAsync(
+    public async Task<PayChanguApiResponse<GetMobileMoneyChargeDetailsResponse>>
+        GetMobileMoneyChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default)
     {
@@ -627,7 +639,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             .GetSingleChargeDetails
             .Replace("{id}", Uri.EscapeDataString(chargeId));
 
-        return await GetAsync<GetMobileMoneyDirectChargeDetailsResponse>(
+        return await GetAsync<GetMobileMoneyChargeDetailsResponse>(
             endpoint,
             "mobile money direct charge details retrieval",
             cancellationToken);
@@ -783,6 +795,28 @@ internal sealed class PayChanguClient : IPayChanguClient
             "wallet balance retrieval",
             cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<PayChanguApiResponse<GetSupportedBanksResponse>>
+        GetSupportedBanksAsync(
+            string currency,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(currency))
+            {
+                throw new ArgumentException(
+                    "Currency cannot be null, empty, or whitespace.",
+                    nameof(currency));
+            }
+
+            var endpoint = PayChanguApiEndpoints.Payout.GetBanks
+                .Replace("{Iso}", Uri.EscapeDataString(currency));
+
+            return await GetAsync<GetSupportedBanksResponse>(
+                endpoint,
+                "Supported banks retrieval",
+                cancellationToken);
+        }
 
     /// <summary>
     /// Sends an HTTP request to PayChangu and deserializes the response.

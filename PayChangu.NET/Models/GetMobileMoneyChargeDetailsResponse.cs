@@ -1,5 +1,4 @@
 ﻿using PayChangu.NET.Models.Base;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -8,7 +7,7 @@ namespace PayChangu.NET.Models;
 /// Represents the response returned when retrieving the details
 /// of a PayChangu Mobile Money Direct Charge transaction.
 /// </summary>
-public sealed class GetMobileMoneyDirectChargeDetailsResponse : BasePaychanguResponse
+public sealed class GetMobileMoneyChargeDetailsResponse : BasePaychanguResponse
 {
     /// <summary>
     /// Gets or sets the retrieved transaction details.
