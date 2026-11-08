@@ -3,7 +3,7 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 
-namespace PayChangu.NET;
+namespace PayChangu.NET.Extensions;
 
 /// <summary>
 /// Provides extension methods for registering PayChangu services

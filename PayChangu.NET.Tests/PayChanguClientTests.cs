@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using PayChangu.NET.Exceptions;
+using PayChangu.NET.Extensions;
 using PayChangu.NET.Models;
 using PayChangu.NET.Tests.Fakes;
 using System.Net;

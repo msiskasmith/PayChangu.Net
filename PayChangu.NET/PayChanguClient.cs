@@ -1,5 +1,6 @@
 ﻿using PayChangu.NET.Constants;
 using PayChangu.NET.Exceptions;
+using PayChangu.NET.Extensions;
 using PayChangu.NET.Models;
 using PayChangu.NET.Models.Base;
 using System;

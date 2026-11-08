@@ -1,4 +1,6 @@
-﻿namespace PayChangu.NET;
+﻿using PayChangu.NET.Extensions;
+
+namespace PayChangu.NET;
 
 /// <summary>
 /// Provides configuration options for connecting to the PayChangu API.
