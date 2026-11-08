@@ -179,6 +179,88 @@ These URLs serve different purposes from the webhook endpoint. Configure your we
 
 **Important:** Do not rely solely on a callback or customer redirect to fulfil an order. Verify the transaction and confirm its final status before treating the payment as completed.
 
+## Mobile Money Direct Charge
+
+PayChangu.NET supports initiating Mobile Money Direct Charge payments. This sends a payment request to the customer's mobile phone, prompting them to authorize the transaction.
+
+### Initiating a Mobile Money Direct Charge
+
+First, retrieve the supported mobile money operators using `GetMobileMoneyOperatorsAsync`. Each operator provides a `RefId` that must be supplied when initiating a charge.
+
+```csharp
+var operatorsResponse = await _payChanguClient.GetMobileMoneyOperatorsAsync(
+    cancellationToken);
+
+if (!operatorsResponse.Success || operatorsResponse.Result == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+// Select the appropriate operator.
+var operatorRefId = operatorsResponse.Result.Data
+    .First(x => x.Name == "Airtel Money")
+    .RefId;
+```
+
+Once you have the operator reference ID, create and submit the charge request:
+
+```csharp
+var request = new InitiateMobileMoneyDirectChargeRequest
+{
+    Mobile = "+265991234567",
+    MobileMoneyOperatorRefId = operatorRefId,
+    Amount = 5000m,
+    ChargeId = Guid.NewGuid().ToString(),
+    Email = "customer@example.com",
+    FirstName = "John",
+    LastName = "Banda"
+};
+
+var response = await _payChanguClient.InitiateMobileMoneyDirectChargeAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+// The charge request was accepted by PayChangu.
+var chargeId = response.Result.Data.ChargeId;
+var status = response.Result.Data.Status;
+```
+
+### Verifying the transaction
+
+A successful initiation response does not mean the customer has completed the payment. The customer must authorize the payment on their mobile device.
+
+Use `VerifyPaymentAsync` with the returned charge identifier to check the transaction status:
+
+```csharp
+var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+    chargeId,
+    PayChanguPaymentFlow.DirectCharge,
+    PayChanguPaymentMethod.MobileMoney,
+    cancellationToken);
+
+if (!verificationResponse.Success ||
+    verificationResponse.Result == null)
+{
+    // Handle the unsuccessful verification request.
+    return;
+}
+
+// Check the actual transaction status before fulfilling the order.
+var paymentStatus = verificationResponse.Result.Status;
+```
+
+The verification response provides normalized transaction details, including the payment status, amount, currency, customer information, and transaction timestamps.
+
+**Important:** Always verify the transaction before treating a Mobile Money Direct Charge as successfully paid. Do not rely solely on the initiation response.
+
 ## Webhooks
 
 PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
