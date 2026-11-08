@@ -1,4 +1,5 @@
-﻿using PayChangu.NET.Models;
+﻿using PayChangu.NET.Json.Converters;
+using PayChangu.NET.Models;
 using PayChangu.NET.Models.Base;
 using System;
 using System.Text.Json.Serialization;
@@ -25,6 +26,7 @@ public sealed class MobileMoneyPayoutTransaction
     /// Gets or sets the payout amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>
@@ -133,29 +135,11 @@ public sealed class MobileMoneyPayoutTransaction
     /// Gets or sets the transaction charges.
     /// </summary>
     [JsonPropertyName("transaction_charges")]
-    public PayChanguMobileMoneyPayoutCharges TransactionCharges { get; set; } = null!;
+    public PayChanguTransactionCharges TransactionCharges { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the payout authorization details.
     /// </summary>
     [JsonPropertyName("authorization")]
     public PayChanguTransactionAuthorization? Authorization { get; set; }
-}
-
-/// <summary>
-/// Represents the transaction charges associated with a Mobile Money Payout.
-/// </summary>
-public sealed class PayChanguMobileMoneyPayoutCharges
-{
-    /// <summary>
-    /// Gets or sets the currency of the transaction charges.
-    /// </summary>
-    [JsonPropertyName("currency")]
-    public string Currency { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the transaction charge amount.
-    /// </summary>
-    [JsonPropertyName("amount")]
-    public decimal Amount { get; set; }
 }

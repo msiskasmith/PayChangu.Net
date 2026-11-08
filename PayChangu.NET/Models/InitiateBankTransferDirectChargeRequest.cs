@@ -11,7 +11,8 @@ public sealed class InitiateBankTransferDirectChargeRequest
     /// Gets or sets the amount to be paid.
     /// </summary>
     [JsonPropertyName("amount")]
-    public string Amount { get; set; } = null!;
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the currency used for the payment.

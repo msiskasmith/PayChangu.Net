@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PayChangu.NET.Json.Converters;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -38,6 +39,7 @@ public sealed class PayChanguTransaction
     /// Gets or sets the transaction amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>
@@ -153,7 +155,8 @@ public sealed class PayChanguTransactionCharges
     /// Gets or sets the transaction charge amount.
     /// </summary>
     [JsonPropertyName("amount")]
-    public string Amount { get; set; } = null!;
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
+    public decimal Amount { get; set; }
 }
 
 /// <summary>

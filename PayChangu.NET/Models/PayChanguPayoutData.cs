@@ -1,4 +1,5 @@
-﻿using PayChangu.NET.Models;
+﻿using PayChangu.NET.Json.Converters;
+using PayChangu.NET.Models;
 using System;
 using System.Text.Json.Serialization;
 
@@ -35,6 +36,7 @@ public sealed class PayChanguPayoutData
     /// Gets or sets the payout amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>

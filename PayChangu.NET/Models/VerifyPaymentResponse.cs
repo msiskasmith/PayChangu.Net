@@ -1,7 +1,9 @@
-﻿using PayChangu.NET.Models.Base;
+﻿using PayChangu.NET.Json.Converters;
+using PayChangu.NET.Models.Base;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
 
@@ -88,6 +90,7 @@ public sealed class VerifyPaymentResponse : BasePaychanguResponse
     /// <summary>
     /// Gets or sets the transaction amount.
     /// </summary>
+
     public decimal Amount { get; set; }
 
     /// <summary>

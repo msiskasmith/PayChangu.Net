@@ -1,4 +1,5 @@
-﻿using PayChangu.NET.Models.Base;
+﻿using PayChangu.NET.Json.Converters;
+using PayChangu.NET.Models.Base;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -66,6 +67,7 @@ public sealed class CheckoutSessionData
     /// Gets or sets the transaction amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>

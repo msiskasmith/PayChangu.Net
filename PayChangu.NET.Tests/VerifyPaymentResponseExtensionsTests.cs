@@ -1,7 +1,4 @@
-﻿
-using PayChangu.NET.Extensions;
-using PayChangu.NET.Models;
-using Xunit;
+﻿using PayChangu.NET.Models;
 
 namespace PayChangu.NET.Tests;
 

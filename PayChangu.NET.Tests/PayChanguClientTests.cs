@@ -66,7 +66,7 @@ public sealed class PayChanguClientTests
             Expiry = "12/2030",
             Cvv = "123",
             CardholderName = "John Banda",
-            Amount = "5000",
+            Amount = 5000,
             Currency = "MWK",
             ChargeId = "card-charge-001",
             RedirectUrl = "https://example.com/redirect",
@@ -860,7 +860,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "charge-001",
             Email = "john@example.com",
             FirstName = "John",
@@ -915,7 +915,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "invalid-operator",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "charge-001"
         };
 
@@ -955,7 +955,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000,
             ChargeId = "charge-001"
         };
 
@@ -1106,7 +1106,7 @@ public sealed class PayChanguClientTests
 
         Assert.NotNull(transaction.TransactionCharges);
         Assert.Equal("MK", transaction.TransactionCharges.Currency);
-        Assert.Equal("1.5", transaction.TransactionCharges.Amount);
+        Assert.Equal(1.5m, transaction.TransactionCharges.Amount);
 
         Assert.NotNull(transaction.Authorization);
         Assert.Equal("Mobile Money", transaction.Authorization.Channel);
@@ -1259,28 +1259,28 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task VerifyPaymentAsync_WhenTransactionChargeAmountIsInvalid_ThrowsPayChanguException()
+    public async Task VerifyPaymentAsync_WhenTransactionChargeAmountIsInvalid_ReturnsZeroAmount()
     {
         // Arrange
         const string json = """
-    {
+{
+    "status": "success",
+    "message": "Payment details retrieved successfully.",
+    "data": {
+        "charge_id": "charge-001",
+        "ref_id": "ref-001",
+        "trans_id": "trans-001",
+        "currency": "MWK",
+        "amount": 5000,
         "status": "success",
-        "message": "Payment details retrieved successfully.",
-        "data": {
-            "charge_id": "charge-001",
-            "ref_id": "ref-001",
-            "trans_id": "trans-001",
+        "transaction_charges": {
             "currency": "MWK",
-            "amount": 5000,
-            "status": "success",
-            "transaction_charges": {
-                "currency": "MWK",
-                "amount": "invalid"
-            },
-            "logs": []
-        }
+            "amount": "invalid"
+        },
+        "logs": []
     }
-    """;
+}
+""";
 
         var handler = new FakeHttpMessageHandler(
             new HttpResponseMessage(HttpStatusCode.OK)
@@ -1293,18 +1293,20 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.VerifyPaymentAsync(
-                "charge-001",
-                PayChanguPaymentFlow.DirectCharge,
-                PayChanguPaymentMethod.MobileMoney));
+        var response = await client.VerifyPaymentAsync(
+            "charge-001",
+            PayChanguPaymentFlow.DirectCharge,
+            PayChanguPaymentMethod.MobileMoney);
 
         // Assert
-        Assert.Contains(
-            "invalid transaction charge amount",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
+        Assert.True(response.Success);
+        Assert.NotNull(response.Result);
+        Assert.NotNull(response.RawJsonResponse);
+
+        Assert.Equal(5000m, response.Result.Amount);
+        Assert.Equal(0m, response.Result.Charges?.Amount);
     }
+
 
     [Fact]
     public async Task VerifyPaymentAsync_MobileMoneyDirectChargeWithMissingData_ReturnsFailure()
@@ -1527,7 +1529,7 @@ public sealed class PayChanguClientTests
 
         var request = new InitiateBankTransferDirectChargeRequest
         {
-            Amount = "1020",
+            Amount = 1020,
             ChargeId = "PTC12383",
             Email = "customer@example.com",
             FirstName = "John",
@@ -1600,7 +1602,7 @@ public sealed class PayChanguClientTests
 
         var request = new InitiateBankTransferDirectChargeRequest
         {
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "bank-charge-001"
         };
 
@@ -1634,7 +1636,7 @@ public sealed class PayChanguClientTests
 
         var request = new InitiateBankTransferDirectChargeRequest
         {
-            Amount = "5000",
+            Amount = 5000,
             ChargeId = "bank-charge-001"
         };
 
@@ -1801,7 +1803,7 @@ public sealed class PayChanguClientTests
 
         Assert.NotNull(transaction.TransactionCharges);
         Assert.Equal("MK", transaction.TransactionCharges.Currency);
-        Assert.Equal("20", transaction.TransactionCharges.Amount);
+        Assert.Equal(20m, transaction.TransactionCharges.Amount);
 
         Assert.NotNull(transaction.Authorization);
         Assert.Equal("Mobile Bank Transfer", transaction.Authorization.Channel);
@@ -1968,7 +1970,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "charge-001"
         };
 
@@ -2001,7 +2003,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "charge-001",
             Email = "john@example.com",
             FirstName = "John",
@@ -2046,7 +2048,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "charge-001"
         };
 
@@ -2089,7 +2091,7 @@ public sealed class PayChanguClientTests
 
         var request = new InitiateBankTransferDirectChargeRequest
         {
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "bank-charge-001"
         };
 
@@ -2119,7 +2121,7 @@ public sealed class PayChanguClientTests
 
         var request = new InitiateBankTransferDirectChargeRequest
         {
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "bank-charge-001",
             Email = "john@example.com",
             FirstName = "John",
@@ -2164,7 +2166,7 @@ public sealed class PayChanguClientTests
 
         var request = new InitiateBankTransferDirectChargeRequest
         {
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "bank-charge-001"
         };
 
@@ -2746,7 +2748,7 @@ public sealed class PayChanguClientTests
             Mobile = "+265992xxxx20",
             MobileMoneyOperatorRefId =
                 "20be6c20-adeb-4b5b-a7ba-0769820df4fb",
-            Amount = "610.2",
+            Amount = 610.2m,
             ChargeId = "6789"
         };
 
@@ -2833,7 +2835,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "payout-001"
         };
 
@@ -2867,7 +2869,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "payout-001",
             Email = "john@example.com",
             FirstName = "John",
@@ -2921,7 +2923,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "payout-001"
         };
 
@@ -2961,7 +2963,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "payout-001"
         };
 
@@ -2999,7 +3001,7 @@ public sealed class PayChanguClientTests
         {
             Mobile = "+265991234567",
             MobileMoneyOperatorRefId = "operator-001",
-            Amount = "5000",
+            Amount = 5000m,
             ChargeId = "payout-001"
         };
 

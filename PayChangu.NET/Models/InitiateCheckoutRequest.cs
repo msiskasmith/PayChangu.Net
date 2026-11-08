@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using PayChangu.NET.Json.Converters;
+using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
 
@@ -19,6 +20,7 @@ public sealed class InitiateCheckoutRequest
     /// </remarks>
     /// <example>5000</example>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>

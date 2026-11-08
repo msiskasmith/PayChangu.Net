@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PayChangu.NET.Json.Converters;
+using System;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -36,6 +37,7 @@ public sealed class MobileMoneyChargeData
     /// Gets or sets the payment amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>

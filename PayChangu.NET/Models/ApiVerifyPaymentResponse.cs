@@ -1,4 +1,5 @@
 ﻿
+using PayChangu.NET.Json.Converters;
 using PayChangu.NET.Models.Base;
 using System;
 using System.Collections.Generic;
@@ -77,6 +78,7 @@ internal sealed class ApiPaymentVerificationData
     /// Gets or sets the transaction amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>

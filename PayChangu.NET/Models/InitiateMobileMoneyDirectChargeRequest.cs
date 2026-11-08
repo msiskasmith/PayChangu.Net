@@ -24,7 +24,8 @@ public sealed class InitiateMobileMoneyDirectChargeRequest
     /// Gets or sets the amount to be charged.
     /// </summary>
     [JsonPropertyName("amount")]
-    public string Amount { get; set; } = null!;
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the unique identifier for this transaction.

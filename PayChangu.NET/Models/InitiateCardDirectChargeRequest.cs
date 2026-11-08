@@ -35,7 +35,8 @@ public sealed class InitiateCardDirectChargeRequest
     /// Gets or sets the transaction amount.
     /// </summary>
     [JsonPropertyName("amount")]
-    public string Amount { get; set; } = null!;
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the transaction currency.

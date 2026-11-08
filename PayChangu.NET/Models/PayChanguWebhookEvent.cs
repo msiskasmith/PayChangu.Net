@@ -1,4 +1,5 @@
 ﻿
+using PayChangu.NET.Json.Converters;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -26,6 +27,7 @@ public sealed class PayChanguWebhookEvent
     /// Gets or sets the transaction amount.
     /// </summary>
     [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>

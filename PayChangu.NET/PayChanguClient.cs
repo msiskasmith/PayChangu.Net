@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -298,7 +299,8 @@ internal sealed class PayChanguClient : IPayChanguClient
 
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
 
     /// <summary>
@@ -1237,8 +1239,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                 : new PayChanguVerificationCharges
                 {
                     Currency = transaction.TransactionCharges.Currency,
-                    Amount = ParseChargeAmount(
-                        transaction.TransactionCharges.Amount)
+                    Amount = transaction.TransactionCharges.Amount
                 },
 
             Authorization = transaction.Authorization == null

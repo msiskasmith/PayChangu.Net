@@ -24,7 +24,8 @@ public sealed class InitiateMobileMoneyPayoutRequest
     /// Gets or sets the amount to be sent.
     /// </summary>
     [JsonPropertyName("amount")]
-    public string Amount { get; set; } = null!;
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the unique identifier for this payout.
