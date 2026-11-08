@@ -472,6 +472,78 @@ if (!verificationResponse.Success ||
 
 **Important:** Always verify the transaction and confirm its final status before fulfilling an order. Do not treat the initiation response or the generated bank account details as proof of payment.
 
+## Supported Banks and Payout Providers
+
+PayChangu.NET provides `GetSupportedBanksAsync` to retrieve the banks and payout providers supported by PayChangu for a specified currency.
+
+### Retrieving supported banks and payout providers
+
+The currency defaults to `MWK`. You can provide another currency code when retrieving providers for a different currency.
+
+```csharp
+var response = await _payChanguClient.GetSupportedBanksAsync(
+    "MWK",
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var providers = response.Result.Data;
+
+foreach (var provider in providers)
+{
+    var bankId = provider.Id;
+    var bankName = provider.Name;
+}
+```
+
+Each returned `SupportedBank` contains:
+
+- `Id` — the provider UUID, required when initiating a Bank Payout.
+- `Name` — the bank or payout provider name.
+
+### Using a provider when initiating a payout
+
+Use the provider UUID returned by `GetSupportedBanksAsync` as the `BankId` in an `InitiateBankPayoutRequest`.
+
+```csharp
+var banksResponse = await _payChanguClient.GetSupportedBanksAsync(
+    "MWK",
+    cancellationToken);
+
+if (!banksResponse.Success || banksResponse.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+var selectedBank = banksResponse.Result.Data
+    .FirstOrDefault(x => x.Name == "National Bank of Malawi");
+
+if (selectedBank == null)
+{
+    // The requested provider was not returned by the API.
+    return;
+}
+
+var request = new InitiateBankPayoutRequest
+{
+    BankId = selectedBank.Id,
+    Amount = 3000m,
+    ChargeId = Guid.NewGuid().ToString(),
+    BankAccountName = "Madalitso Kamwendo",
+    BankAccountNumber = "1000000010"
+};
+
+// Pass the request to InitiateBankPayoutAsync.
+```
+
+**Note:** The returned list is filtered by currency. Use the UUID provided by PayChangu rather than hardcoding provider identifiers.
+
 ## Bank Payout
 
 PayChangu.NET supports initiating bank payouts, retrieving individual bank payout details, and retrieving paginated bank payout transactions.
