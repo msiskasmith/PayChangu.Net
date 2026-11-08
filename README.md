@@ -132,7 +132,7 @@ public class PaymentsController : Controller
             LastName = "Banda",
             TransactionReference = Guid.NewGuid().ToString(),
 
-            CallbackUrl = "https://example.com/api/payments/callback",
+            CallbackUrl = "https://example.com/payments/callback",
             ReturnUrl = "https://example.com/payment/return",
 
             Customization = new PaymentCustomization
