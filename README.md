@@ -780,6 +780,63 @@ The SDK considers the refund request successful when PayChangu returns HTTP 200.
 
 **Security:** Never log or expose card numbers or CVVs. Handle card details securely and avoid storing sensitive card verification data.
 
+## Wallet Balance
+
+PayChangu.NET provides `GetBalanceAsync` to retrieve wallet balance information for a specified currency.
+
+### Retrieving the wallet balance
+
+The currency defaults to `MWK`. You can also specify another currency, such as `USD`.
+
+```csharp
+var response = await _payChanguClient.GetBalanceAsync(
+    cancellationToken: cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var balance = response.Result.Data;
+
+// Access the wallet balance information.
+var environment = balance.Environment;
+var currency = balance.Currency;
+var mainBalance = balance.MainBalance;
+var collectionBalance = balance.CollectionBalance;
+```
+
+To retrieve the balance for a different currency:
+
+```csharp
+var response = await _payChanguClient.GetBalanceAsync(
+    "USD",
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+var balance = response.Result.Data;
+
+var currency = balance.Currency;
+var mainBalance = balance.MainBalance;
+var collectionBalance = balance.CollectionBalance;
+```
+
+The returned `BalanceData` contains:
+
+- `Environment` — the PayChangu environment associated with the wallet.
+- `Currency` — the currency of the retrieved balance.
+- `MainBalance` — the main wallet balance, returned as a string.
+- `CollectionBalance` — the collection wallet balance, represented as a decimal.
+
+**Note:** The method performs a balance retrieval request. It does not initiate a payout or transfer funds.
+
 ## Webhooks
 
 PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
