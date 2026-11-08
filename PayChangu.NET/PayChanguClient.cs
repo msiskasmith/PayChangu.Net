@@ -1013,16 +1013,13 @@ internal sealed class PayChanguClient : IPayChanguClient
         // Return unsuccessful HTTP responses as API response objects.
         if (!response.IsSuccessStatusCode)
         {
-            if (!response.IsSuccessStatusCode)
-            {
-                return CreateFailure<TResponse>(
-                    response.StatusCode,
-                    ExtractErrorMessage(
-                        content,
-                        operation,
-                        response.StatusCode),
-                    content);
-            }
+            return CreateFailure<TResponse>(
+                response.StatusCode,
+                ExtractErrorMessage(
+                    content,
+                    operation,
+                    response.StatusCode),
+                content);
         }
 
         // A successful HTTP status does not guarantee a valid response body.

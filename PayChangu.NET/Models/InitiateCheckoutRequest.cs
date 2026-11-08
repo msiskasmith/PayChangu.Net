@@ -9,7 +9,7 @@ namespace PayChangu.NET.Models;
 /// </summary>
 /// <remarks>
 /// The request contains the transaction details, customer information,
-/// callback and return URLs, and optional metadata.
+/// callback and return URLs, checkout customization details, and optional metadata.
 /// </remarks>
 public sealed class InitiateCheckoutRequest
 {
@@ -54,23 +54,26 @@ public sealed class InitiateCheckoutRequest
     public string LastName { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the URL to which PayChangu sends payment callback notifications.
+    /// Gets or sets the URL to which PayChangu sends a callback for a
+    /// successful transaction.
     /// </summary>
     /// <remarks>
-    /// This should point to a publicly accessible endpoint in your application
-    /// that handles payment notifications.
+    /// This should point to a publicly accessible page in your application
+    /// that handles successful payment callbacks. It is separate from the webhook
+    /// endpoint configured in the PayChangu dashboard.
     /// </remarks>
-    /// <example>https://example.com/api/payments/callback</example>
+    /// <example>https://example.com/payments/callback</example>
     [JsonPropertyName("callback_url")]
     public string CallbackUrl { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the URL to which the customer is redirected after the
-    /// checkout process.
+    /// Gets or sets the URL to which the customer is redirected when the
+    /// checkout process is canceled or fails.
     /// </summary>
     /// <remarks>
-    /// Use this URL to return the customer to your application after checkout.
-    /// Do not rely solely on this redirect to confirm payment.
+    /// Use this URL to return the customer to your application when the checkout
+    /// is unsuccessful. Do not rely on the redirect alone to determine the
+    /// final status of a transaction.
     /// </remarks>
     /// <example>https://example.com/payment/return</example>
     [JsonPropertyName("return_url")]
