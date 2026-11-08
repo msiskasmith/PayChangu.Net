@@ -7,23 +7,27 @@ PayChangu.NET provides a strongly typed, asynchronous interface for interacting 
 ## Features
 
 - Standard Checkout payment initiation.
-- Mobile Money Direct Charge operations.
-- Bank Transfer Direct Charge operations.
-- Card Direct Charge operations, including refunds.
+- Mobile Money Direct Charge initiation and transaction details retrieval.
+- Bank Transfer Direct Charge initiation and transaction details retrieval.
+- Card Direct Charge initiation, verification, and refunds.
 - Payment verification across supported payment flows.
-- Mobile Money payout initiation and details retrieval.
+- Mobile Money payout initiation.
 - Bank payout initiation and transaction details retrieval.
-- Retrieval of supported Mobile Money operators and payout banks.
+- Retrieval of supported Mobile Money operators.
+- Retrieval of supported banks and payout providers.
+- Wallet balance retrieval.
+- Paginated bank payout transaction retrieval.
 - Strongly typed request and response models.
 - Dependency injection support through `IHttpClientFactory`.
 - Configurable API base URL.
+- Bearer token authentication.
 - Asynchronous operations with cancellation token support.
 - Standardized API response handling.
-- Built on `HttpClient` and `System.Text.Json`.
+- Webhook signature validation support.
 
 ## Installation
 
-Install the package using the .NET CLI:
+Once the package is published, install it using the .NET CLI:
 
 ```bash
 dotnet add package PayChangu.NET
@@ -31,7 +35,9 @@ dotnet add package PayChangu.NET
 
 ## Configuration
 
-Register PayChangu.NET with your application's dependency injection container.
+Register PayChangu.NET with your application's dependency injection container using `AddPayChangu`.
+
+The PayChangu secret key is required. The API base URL defaults to `https://api.paychangu.com/`.
 
 ```csharp
 builder.Services.AddPayChangu(options =>
@@ -40,7 +46,17 @@ builder.Services.AddPayChangu(options =>
 });
 ```
 
-You can also configure a custom API base URL:
+You can also configure the optional webhook secret:
+
+```csharp
+builder.Services.AddPayChangu(options =>
+{
+    options.SecretKey = builder.Configuration["PayChangu:SecretKey"]!;
+    options.WebhookSecret = builder.Configuration["PayChangu:WebhookSecret"];
+});
+```
+
+To override the default API base URL:
 
 ```csharp
 builder.Services.AddPayChangu(options =>
@@ -50,66 +66,32 @@ builder.Services.AddPayChangu(options =>
 });
 ```
 
-For security, store your PayChangu secret key in configuration or a secure secrets provider rather than hardcoding it in your application.
+### HTTP client configuration
 
-## Using the Client
-
-Inject `IPayChanguClient` into your application services or classes that need to communicate with PayChangu.
+`AddPayChangu` accepts an optional `configureHttpClient` action. Use it when you need to customize the underlying `HttpClient` configuration.
 
 ```csharp
-public class PaymentService
-{
-    private readonly IPayChanguClient _payChanguClient;
-
-    public PaymentService(IPayChanguClient payChanguClient)
+builder.Services.AddPayChangu(
+    options =>
     {
-        _payChanguClient = payChanguClient;
-    }
-}
+        options.SecretKey = builder.Configuration["PayChangu:SecretKey"]!;
+    },
+    httpClient =>
+    {
+        // Add any required HttpClient configuration here.
+    });
 ```
 
-## API Responses
+The SDK automatically configures Bearer token authentication and the JSON `Accept` header.
 
-API operations return a `PayChanguApiResponse` or `PayChanguApiResponse<T>`, depending on whether the operation returns a response payload.
+### Dependency injection
 
-The response wrapper provides:
+Registration provides the following services:
 
-| Property | Description |
-|---|---|
-| `Success` | Indicates whether the API operation was successful. |
-| `StatusCode` | HTTP status code returned by the API, when available. |
-| `ErrorMessage` | Error information when the operation fails. |
-| `Result` | Deserialized response payload for generic responses. |
-| `RawJsonResponse` | Raw response body when available. |
+- `IPayChanguClient` — communicates with the PayChangu API.
+- `IPayChanguWebhookService` — provides webhook signature validation and related webhook functionality.
 
-Check the `Success` property before accessing the result:
-
-```csharp
-var response = await _payChanguClient.InitiatePaymentAsync(request);
-
-if (response.Success)
-{
-    var payment = response.Result;
-
-    // Continue with the successful response.
-}
-else
-{
-    Console.WriteLine(response.ErrorMessage);
-}
-```
-
-## Cancellation
-
-All asynchronous API operations support cancellation tokens.
-
-```csharp
-var response = await _payChanguClient.InitiatePaymentAsync(
-    request,
-    cancellationToken);
-```
-
-This allows your application to cancel outstanding HTTP requests when necessary.
+Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
 
 ## License
 
