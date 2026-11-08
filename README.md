@@ -300,6 +300,81 @@ The returned `PayChanguTransaction` provides information such as the charge iden
 
 **Important:** Retrieving transaction details does not replace payment verification. When deciding whether to fulfil an order, use `VerifyPaymentAsync` and validate the returned `VerifyPaymentResponse` against your expected transaction identifier, currency, and amount using the `IsValid` extension method.
 
+## Mobile Money Payout
+
+PayChangu.NET supports initiating Mobile Money payouts using `InitiateMobileMoneyPayoutAsync`. This allows your application to send funds to a recipient's mobile money account.
+
+### Initiating a Mobile Money Payout
+
+First, retrieve the supported mobile money operators using `GetMobileMoneyOperatorsAsync`. Use the selected operator's `RefId` when creating the payout request.
+
+```csharp
+var operatorsResponse = await _payChanguClient.GetMobileMoneyOperatorsAsync(
+    cancellationToken);
+
+if (!operatorsResponse.Success || operatorsResponse.Result == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+// Select the appropriate operator.
+var operatorRefId = operatorsResponse.Result.Data
+    .First(x => x.Name == "Airtel Money")
+    .RefId;
+```
+
+Create an `InitiateMobileMoneyPayoutRequest` and pass it to `InitiateMobileMoneyPayoutAsync`:
+
+```csharp
+var request = new InitiateMobileMoneyPayoutRequest
+{
+    Mobile = "+265992123456",
+    MobileMoneyOperatorRefId = operatorRefId,
+    Amount = 5000m,
+    ChargeId = Guid.NewGuid().ToString(),
+    Email = "recipient@example.com",
+    FirstName = "John",
+    LastName = "Banda"
+};
+
+var response = await _payChanguClient.InitiateMobileMoneyPayoutAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var transaction = response.Result.Data;
+
+// Access the payout transaction details.
+var chargeId = transaction.ChargeId;
+var referenceId = transaction.ReferenceId;
+var status = transaction.Status;
+var amount = transaction.Amount;
+var currency = transaction.Currency;
+
+// Access the mobile money operator details.
+var operatorName = transaction.MobileMoney?.Name;
+var operatorCountry = transaction.MobileMoney?.Country;
+```
+
+The request requires the recipient's mobile number, mobile money operator reference ID, payout amount, and a unique charge identifier. Recipient name and email details are optional.
+
+The response provides the payout transaction details, including the PayChangu reference ID, transaction status, recipient mobile number, operator information, transaction charges, authorization details, and timestamps.
+
+### Sandbox testing
+
+The request supports an optional `TransactionStatus` property for simulating payout outcomes in PayChangu's sandbox environment.
+
+Accepted values are `"failed"` and `"successful"`. Do not set this property when using the production environment.
+
+**Important:** A successful API response does not necessarily mean the payout has been completed. Inspect the returned transaction status and handle payout notifications through your configured webhook endpoint. The SDK recognizes the `api.payout` webhook event for payout notifications.
+
 ## Bank Transfer Direct Charge
 
 PayChangu.NET supports Bank Transfer Direct Charge payments. This flow generates bank account details that the customer can use to complete a payment.
