@@ -262,6 +262,44 @@ Use the `IsValid` extension method on `VerifyPaymentResponse` to validate the tr
 
 **Important:** Always verify the transaction before treating a Mobile Money Direct Charge as successfully paid. Do not rely solely on the initiation response.
 
+### Retrieving Mobile Money Direct Charge details
+
+After initiating a Mobile Money Direct Charge, retrieve its transaction details using `GetSingleMobileMoneyChargeDetailsAsync` and the charge identifier:
+
+```csharp
+var detailsResponse = await _payChanguClient.GetSingleMobileMoneyChargeDetailsAsync(
+    chargeId,
+    cancellationToken);
+
+if (!detailsResponse.Success || detailsResponse.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect detailsResponse.ErrorMessage and detailsResponse.StatusCode.
+    return;
+}
+
+var transaction = detailsResponse.Result.Data;
+
+// Access the transaction details.
+var transactionStatus = transaction.Status;
+var amount = transaction.Amount;
+var currency = transaction.Currency;
+var transactionReference = transaction.ReferenceId;
+var providerTransactionId = transaction.TransactionId;
+
+// Access the mobile money operator details.
+var operatorName = transaction.MobileMoney?.Name;
+var operatorCountry = transaction.MobileMoney?.Country;
+
+// Access transaction timestamps.
+var createdAt = transaction.CreatedAt;
+var completedAt = transaction.CompletedAt;
+```
+
+The returned `PayChanguTransaction` provides information such as the charge identifier, transaction reference, amount, currency, status, customer details, mobile money operator, transaction charges, authorization details, processing logs, and timestamps.
+
+**Important:** Retrieving transaction details does not replace payment verification. When deciding whether to fulfil an order, use `VerifyPaymentAsync` and validate the returned `VerifyPaymentResponse` against your expected transaction identifier, currency, and amount using the `IsValid` extension method.
+
 ## Bank Transfer Direct Charge
 
 PayChangu.NET supports Bank Transfer Direct Charge payments. This flow generates bank account details that the customer can use to complete a payment.
