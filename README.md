@@ -261,6 +261,103 @@ The verification response provides normalized transaction details, including the
 
 **Important:** Always verify the transaction before treating a Mobile Money Direct Charge as successfully paid. Do not rely solely on the initiation response.
 
+## Bank Transfer Direct Charge
+
+PayChangu.NET supports Bank Transfer Direct Charge payments. This flow generates bank account details that the customer can use to complete a payment.
+
+### Initiating a Bank Transfer Direct Charge
+
+Create an \`InitiateBankTransferDirectChargeRequest\` and pass it to \`InitiateBankTransferDirectChargeAsync\`.
+
+\`\`\`csharp
+using System;
+
+var chargeId = Guid.NewGuid().ToString();
+
+var request = new InitiateBankTransferDirectChargeRequest
+{
+    Amount = 5000m,
+    Currency = "MWK",
+    ChargeId = chargeId,
+    Email = "customer@example.com",
+    FirstName = "John",
+    LastName = "Banda",
+    Mobile = "+265991234567",
+    CreatePermanentAccount = false
+};
+
+var response = await _payChanguClient.InitiateBankTransferDirectChargeAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var paymentDetails = response.Result.Data.PaymentAccountDetails;
+var transaction = response.Result.Data.Transaction;
+
+// Provide these bank details to the customer.
+var bankName = paymentDetails.BankName;
+var accountNumber = paymentDetails.AccountNumber;
+var accountName = paymentDetails.AccountName;
+var accountExpiry = DateTimeOffset.FromUnixTimeSeconds(
+    paymentDetails.AccountExpirationTimestamp);
+
+var transactionStatus = transaction.Status;
+\`\`\`
+
+The response provides the bank name, account number, account name, account expiration timestamp, and transaction details.
+
+The SDK sets the payment method to \`mobile_bank_transfer\`; you do not need to set it yourself. The currency defaults to \`MWK\`. \`CreatePermanentAccount\` is an optional nullable flag and defaults to \`null\` when omitted.
+
+### Retrieving Bank Transfer Direct Charge details
+
+Use \`GetSingleBankDirectChargeDetailsAsync\` with the charge identifier to retrieve the transaction details:
+
+\`\`\`csharp
+var detailsResponse = await _payChanguClient.GetSingleBankDirectChargeDetailsAsync(
+    chargeId,
+    cancellationToken);
+
+if (!detailsResponse.Success || detailsResponse.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+var transactionDetails = detailsResponse.Result.Data.Transaction;
+var status = transactionDetails.Status;
+\`\`\`
+
+### Verifying the transaction
+
+Initiating a Bank Transfer Direct Charge generates the bank account details; it does not mean the customer has completed the payment.
+
+Use \`VerifyPaymentAsync\` to verify the transaction:
+
+\`\`\`csharp
+var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+    chargeId,
+    PayChanguPaymentFlow.DirectCharge,
+    PayChanguPaymentMethod.BankTransfer,
+    cancellationToken);
+
+if (!verificationResponse.Success ||
+    verificationResponse.Result == null)
+{
+    // Handle the unsuccessful verification request.
+    return;
+}
+
+var paymentStatus = verificationResponse.Result.Status;
+\`\`\`
+
+**Important:** Always verify the transaction and confirm its final status before fulfilling an order. Do not treat the initiation response or the generated bank account details as proof of payment.
+
 ## Webhooks
 
 PayChangu uses a single webhook endpoint for notifications from Standard Checkout, Direct Charge, and Payout transactions.
