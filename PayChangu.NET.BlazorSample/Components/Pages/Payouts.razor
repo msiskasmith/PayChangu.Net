@@ -331,7 +331,7 @@
                 LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim()
             });
 
-        if (!response.Success || response.Result?.Data is not { } data)
+        if (!response.Success || response.Result?.Data?.Transaction is not { } data)
         {
             errorMessage = response.ErrorMessage ?? "PayChangu could not initiate the Mobile Money payout.";
             return;
