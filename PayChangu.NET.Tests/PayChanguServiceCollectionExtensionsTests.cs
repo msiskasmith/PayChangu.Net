@@ -150,4 +150,44 @@ public sealed class PayChanguServiceCollectionExtensionsTests
         Assert.Throws<ArgumentNullException>(
             () => services.AddPayChangu(null!));
     }
+
+    [Fact]
+    public async Task AddPayChangu_ShouldLogAndRethrowHttpTransportExceptions()
+    {
+        // Arrange
+        var expectedException = new HttpRequestException("Connection failed.");
+        var handler = new FakeHttpMessageHandler(
+            (_, _) => Task.FromException<HttpResponseMessage>(expectedException));
+
+        using var loggerProvider = new TestLoggerProvider();
+
+        var services = new ServiceCollection();
+
+        services.AddLogging(builder =>
+        {
+            builder.AddProvider(loggerProvider);
+            builder.SetMinimumLevel(LogLevel.Debug);
+        });
+
+        services.AddPayChangu(
+            options => options.SecretKey = SecretKey,
+            httpClientBuilder =>
+                httpClientBuilder.ConfigurePrimaryHttpMessageHandler(() => handler));
+
+        using var provider = services.BuildServiceProvider();
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.ReferenceData.MobileMoneyOperators.GetAllAsync());
+
+        // Assert
+        Assert.Same(expectedException, exception);
+        Assert.Contains(
+            loggerProvider.Entries,
+            entry =>
+                entry.LogLevel == LogLevel.Error &&
+                entry.Exception == expectedException &&
+                entry.Message.Contains("HTTP transport failure"));
+    }
 }
