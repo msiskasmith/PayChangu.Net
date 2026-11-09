@@ -38,4 +38,5 @@ Open the local URL shown in the application output.
 
 - The application uses Blazor Interactive Server rendering. PayChangu API calls and secret-key handling stay on the server.
 - The PayChangu client is registered through `AddPayChangu` and can be injected into components or application services using `IPayChanguClient`.
-- Payment examples will be added incrementally.
+- The Payment Flows page demonstrates Standard Checkout, Mobile Money Direct Charge, and Bank Transfer Direct Charge initiation.
+- The Transactions page demonstrates payment verification. A successful Direct Charge initiation is not proof of payment; verify the transaction or process its webhook before fulfilling an order.
