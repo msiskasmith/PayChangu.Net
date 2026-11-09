@@ -1,0 +1,373 @@
+@page "/payouts"
+
+<PageTitle>Payouts | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Payouts</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Send funds to a Mobile Money wallet or bank account using PayChangu.
+        </RadzenText>
+    </div>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <div>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Payout method</RadzenText>
+                <RadzenDropDown TValue="string"
+                                Data="@payoutMethods"
+                                @bind-Value="selectedPayoutMethod"
+                                Style="width: 100%" />
+            </div>
+
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Amount</RadzenText>
+                    <RadzenNumeric TValue="decimal"
+                                   @bind-Value="amount"
+                                   Min="1"
+                                   Format="N2"
+                                   Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Currency</RadzenText>
+                    <RadzenDropDown TValue="PayChanguCurrency"
+                                    Data="@currencies"
+                                    @bind-Value="currency"
+                                    Change="@OnCurrencyChanged"
+                                    Style="width: 100%" />
+                </RadzenColumn>
+            </RadzenRow>
+
+            @if (selectedPayoutMethod == "Mobile Money")
+            {
+                <RadzenText TextStyle="TextStyle.Subtitle2">Mobile Money operator</RadzenText>
+                <RadzenDropDown TValue="string"
+                                Data="@mobileMoneyOperators"
+                                TextProperty="Name"
+                                ValueProperty="RefId"
+                                @bind-Value="selectedOperatorRefId"
+                                Placeholder="Select an operator"
+                                Disabled="@isLoadingReferenceData"
+                                Style="width: 100%" />
+                @if (isLoadingReferenceData)
+                {
+                    <RadzenText TextStyle="TextStyle.Caption">Loading payout operators...</RadzenText>
+                }
+                else if (!string.IsNullOrWhiteSpace(referenceDataError))
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning">@referenceDataError</RadzenAlert>
+                }
+                <RadzenTextBox @bind-Value="mobile"
+                               Placeholder="Recipient mobile number"
+                               Style="width: 100%" />
+            }
+            else
+            {
+                <RadzenText TextStyle="TextStyle.Subtitle2">Bank or payout provider</RadzenText>
+                <RadzenDropDown TValue="Guid"
+                                Data="@supportedBanks"
+                                TextProperty="Name"
+                                ValueProperty="Id"
+                                @bind-Value="selectedBankId"
+                                Placeholder="Select a bank or provider"
+                                Disabled="@isLoadingReferenceData"
+                                Style="width: 100%" />
+                @if (isLoadingReferenceData)
+                {
+                    <RadzenText TextStyle="TextStyle.Caption">Loading supported banks...</RadzenText>
+                }
+                else if (!string.IsNullOrWhiteSpace(referenceDataError))
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning">@referenceDataError</RadzenAlert>
+                }
+                <RadzenTextBox @bind-Value="bankAccountName"
+                               Placeholder="Recipient account name"
+                               Style="width: 100%" />
+                <RadzenTextBox @bind-Value="bankAccountNumber"
+                               Placeholder="Recipient account number"
+                               Style="width: 100%" />
+            }
+
+            <RadzenDivider />
+            <RadzenText TextStyle="TextStyle.Subtitle2">Recipient details (optional)</RadzenText>
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenTextBox @bind-Value="firstName"
+                                   Placeholder="First name"
+                                   Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenTextBox @bind-Value="lastName"
+                                   Placeholder="Last name"
+                                   Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="12">
+                    <RadzenTextBox @bind-Value="email"
+                                   Placeholder="Email address"
+                                   Style="width: 100%" />
+                </RadzenColumn>
+            </RadzenRow>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger">@errorMessage</RadzenAlert>
+            }
+
+            <div>
+                <RadzenButton Text="Initiate payout"
+                              Icon="send"
+                              Click="@InitiatePayoutAsync"
+                              Disabled="@isLoading" />
+            </div>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (isLoading)
+    {
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.Body2">Sending payout request to PayChangu...</RadzenText>
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrWhiteSpace(chargeId))
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenAlert AlertStyle="AlertStyle.Info">
+                    PayChangu accepted the payout request. This does not confirm that funds have reached the recipient.
+                    Check the payout status or process the payout webhook before treating it as completed.
+                </RadzenAlert>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@chargeId</RadzenText>
+                @if (!string.IsNullOrWhiteSpace(providerReference))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Provider reference</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@providerReference</RadzenText>
+                }
+                @if (!string.IsNullOrWhiteSpace(transactionStatus))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Status</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@transactionStatus</RadzenText>
+                }
+                @if (!string.IsNullOrWhiteSpace(accountDetails))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Recipient account</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@accountDetails</RadzenText>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+
+    private readonly string[] payoutMethods = ["Mobile Money", "Bank Transfer"];
+    private readonly PayChanguCurrency[] currencies = Enum.GetValues<PayChanguCurrency>();
+    private readonly List<SupportedMobileMoneyOperator> mobileMoneyOperators = [];
+    private readonly List<SupportedBank> supportedBanks = [];
+
+    private string selectedPayoutMethod = "Mobile Money";
+    private PayChanguCurrency currency = PayChanguCurrency.MWK;
+    private decimal amount = 5000m;
+    private string? selectedOperatorRefId;
+    private Guid selectedBankId;
+    private string mobile = string.Empty;
+    private string bankAccountName = string.Empty;
+    private string bankAccountNumber = string.Empty;
+    private string firstName = string.Empty;
+    private string lastName = string.Empty;
+    private string email = string.Empty;
+    private bool isLoading;
+    private bool isLoadingReferenceData;
+    private string? referenceDataError;
+    private string? errorMessage;
+    private string? chargeId;
+    private string? providerReference;
+    private string? transactionStatus;
+    private string? accountDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReferenceDataAsync();
+    }
+
+    private async Task OnCurrencyChanged(object value)
+    {
+        currency = (PayChanguCurrency)value;
+        await LoadMobileMoneyOperatorsAsync();
+        await LoadSupportedBanksAsync();
+    }
+
+    private async Task LoadMobileMoneyOperatorsAsync()
+    {
+        var response = await payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync();
+
+        if (response.Success && response.Result?.Data is { } operators)
+        {
+            mobileMoneyOperators.Clear();
+            mobileMoneyOperators.AddRange(operators.Where(x =>
+                x.SupportsWithdrawals &&
+                string.Equals(x.SupportedCountry.Currency, currency.ToString(),
+                    StringComparison.OrdinalIgnoreCase)));
+
+            if (!mobileMoneyOperators.Any(x => x.RefId == selectedOperatorRefId))
+            {
+                selectedOperatorRefId = mobileMoneyOperators.FirstOrDefault()?.RefId;
+            }
+        }
+        else
+        {
+            referenceDataError = response.ErrorMessage ??
+                "Unable to retrieve Mobile Money payout operators.";
+        }
+    }
+
+    private async Task LoadReferenceDataAsync()
+    {
+        isLoadingReferenceData = true;
+        referenceDataError = null;
+
+        try
+        {
+            await LoadMobileMoneyOperatorsAsync();
+            await LoadSupportedBanksAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            referenceDataError = $"Unable to retrieve payout reference data: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingReferenceData = false;
+        }
+    }
+
+    private async Task LoadSupportedBanksAsync()
+    {
+        var response = await payChanguClient.ReferenceData.Banks.GetSupportedAsync(currency);
+
+        if (response.Success && response.Result?.Data is { } banks)
+        {
+            supportedBanks.Clear();
+            supportedBanks.AddRange(banks);
+            if (!supportedBanks.Any(x => x.Id == selectedBankId))
+            {
+                selectedBankId = supportedBanks.FirstOrDefault()?.Id ?? Guid.Empty;
+            }
+        }
+        else
+        {
+            referenceDataError = response.ErrorMessage ??
+                $"Unable to retrieve supported banks for {currency}.";
+        }
+    }
+
+    private async Task InitiatePayoutAsync()
+    {
+        errorMessage = null;
+        chargeId = null;
+        providerReference = null;
+        transactionStatus = null;
+        accountDetails = null;
+
+        if (amount <= 0)
+        {
+            errorMessage = "Enter an amount greater than zero.";
+            return;
+        }
+
+        if (selectedPayoutMethod == "Mobile Money" &&
+            (string.IsNullOrWhiteSpace(mobile) ||
+             string.IsNullOrWhiteSpace(selectedOperatorRefId)))
+        {
+            errorMessage = "Select a payout operator and enter the recipient's mobile number.";
+            return;
+        }
+
+        if (selectedPayoutMethod == "Bank Transfer" &&
+            (selectedBankId == Guid.Empty ||
+             string.IsNullOrWhiteSpace(bankAccountName) ||
+             string.IsNullOrWhiteSpace(bankAccountNumber)))
+        {
+            errorMessage = "Select a bank or provider and enter the recipient's account details.";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            if (selectedPayoutMethod == "Mobile Money")
+            {
+                await InitiateMobileMoneyPayoutAsync();
+            }
+            else
+            {
+                await InitiateBankPayoutAsync();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to PayChangu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task InitiateMobileMoneyPayoutAsync()
+    {
+        var response = await payChanguClient.Payouts.MobileMoney.InitiateAsync(
+            new InitiateMobileMoneyPayoutRequest
+            {
+                Mobile = mobile.Trim(),
+                MobileMoneyOperatorRefId = selectedOperatorRefId!,
+                Amount = amount,
+                ChargeId = Guid.NewGuid().ToString(),
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+                FirstName = string.IsNullOrWhiteSpace(firstName) ? null : firstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim()
+            });
+
+        if (!response.Success || response.Result?.Data is not { } data)
+        {
+            errorMessage = response.ErrorMessage ?? "PayChangu could not initiate the Mobile Money payout.";
+            return;
+        }
+
+        chargeId = data.ChargeId;
+        providerReference = data.ReferenceId;
+        transactionStatus = data.Status;
+    }
+
+    private async Task InitiateBankPayoutAsync()
+    {
+        var response = await payChanguClient.Payouts.Bank.InitiateAsync(
+            new InitiateBankPayoutRequest
+            {
+                BankId = selectedBankId,
+                Amount = amount,
+                ChargeId = Guid.NewGuid().ToString(),
+                BankAccountName = bankAccountName.Trim(),
+                BankAccountNumber = bankAccountNumber.Trim(),
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+                FirstName = string.IsNullOrWhiteSpace(firstName) ? null : firstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim()
+            });
+
+        if (!response.Success || response.Result?.Data?.Transaction is not { } data)
+        {
+            errorMessage = response.ErrorMessage ?? "PayChangu could not initiate the bank payout.";
+            return;
+        }
+
+        chargeId = data.ChargeId;
+        providerReference = data.ReferenceId;
+        transactionStatus = data.Status;
+        accountDetails = $"{data.RecipientAccountDetails.BankName} — " +
+                         $"{data.RecipientAccountDetails.AccountNumber} " +
+                         $"({data.RecipientAccountDetails.AccountName})";
+    }
+}
