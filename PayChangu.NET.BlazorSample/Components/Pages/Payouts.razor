@@ -172,7 +172,7 @@
                     <RadzenText TextStyle="TextStyle.Subtitle2">Recipient account</RadzenText>
                     <RadzenText TextStyle="TextStyle.Body2">@accountDetails</RadzenText>
                 }
-                @if (selectedPayoutMethod == "Bank Transfer")
+                @if (lastPayoutWasBankTransfer)
                 {
                     <RadzenButton Text="Get payout details"
                                   Icon="search"
@@ -270,6 +270,7 @@
     private string? providerReference;
     private string? transactionStatus;
     private string? accountDetails;
+    private bool lastPayoutWasBankTransfer;
     private bool isLoadingBankPayouts;
     private bool bankPayoutListSucceeded;
     private string? bankPayoutListMessage;
@@ -477,6 +478,9 @@
         providerReference = null;
         transactionStatus = null;
         accountDetails = null;
+        payoutDetails = null;
+        payoutDetailsMessage = null;
+        lastPayoutWasBankTransfer = selectedPayoutMethod == "Bank Transfer";
 
         if (amount <= 0)
         {
