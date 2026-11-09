@@ -98,7 +98,8 @@
                     <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
                     <RadzenButton Text="Refresh details" Icon="refresh" Size="ButtonSize.Small"
                                   Click="@GenerateTestDetails" />
-                </RadzenRow>
+                </div>
+                <RadzenText TextStyle="TextStyle.Caption">Generated values are editable. Refresh to generate another set.</RadzenText>
                 @if (selectedPaymentFlow == "Card Direct Charge")
                 {
                     <RadzenAlert AlertStyle="AlertStyle.Warning">
