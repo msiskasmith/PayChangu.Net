@@ -1,4 +1,5 @@
-﻿using PayChangu.NET.Models.Base;
+﻿using PayChangu.NET.Json.Converters;
+using PayChangu.NET.Models.Base;
 using System.Text.Json.Serialization;
 
 namespace PayChangu.NET.Models;
@@ -36,12 +37,14 @@ public sealed class BalanceData
     /// Gets or sets the main wallet balance.
     /// </summary>
     [JsonPropertyName("main_balance")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal MainBalance { get; set; }
 
     /// <summary>
     /// Gets or sets the collection wallet balance.
     /// </summary>
     [JsonPropertyName("collection_balance")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal CollectionBalance { get; set; }
 }
 
