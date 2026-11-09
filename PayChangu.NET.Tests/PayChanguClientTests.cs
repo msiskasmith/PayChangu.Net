@@ -1771,7 +1771,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSingleBankDirectChargeDetailsAsync(
+        var response = await client.GetSingleBankTransferDirectChargeDetailsAsync(
             "PTC12383");
 
         // Assert
@@ -1853,7 +1853,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSingleBankDirectChargeDetailsAsync("PTC12383");
+        await client.GetSingleBankTransferDirectChargeDetailsAsync("PTC12383");
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -1886,7 +1886,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSingleBankDirectChargeDetailsAsync(
+        var response = await client.GetSingleBankTransferDirectChargeDetailsAsync(
             "PTC12383");
 
         // Assert
@@ -1913,7 +1913,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSingleBankDirectChargeDetailsAsync(
+        var response = await client.GetSingleBankTransferDirectChargeDetailsAsync(
             "PTC12383");
 
         // Assert
@@ -1940,7 +1940,7 @@ public sealed class PayChanguClientTests
 
         // Act
         var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetSingleBankDirectChargeDetailsAsync(chargeId!));
+            () => client.GetSingleBankTransferDirectChargeDetailsAsync(chargeId!));
 
         // Assert
         Assert.Equal(
