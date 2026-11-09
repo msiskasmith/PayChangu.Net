@@ -27,6 +27,8 @@ Do not commit API keys or webhook secrets to `appsettings.json` or source contro
 
 ## Run the sample
 
+Run these commands from the sample project directory (`PayChangu.NET.BlazorSample`):
+
 ```bash
 dotnet restore
 dotnet run
