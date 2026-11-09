@@ -19,9 +19,38 @@
                 The sample uses .NET User Secrets to keep your PayChangu credentials out of source control.
                 Configure your API secret key before running the application.
             </RadzenText>
-            <pre><code>dotnet user-secrets set "PayChangu:SecretKey" "&lt;your-paychangu-secret-key&gt;"</code></pre>
             <RadzenText TextStyle="TextStyle.Body2">
-                Run the application with <code>dotnet run</code>, then choose an example from the navigation.
+                Open a terminal in the repository root and change to the sample project directory:
+            </RadzenText>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">cd PayChangu.NET.BlazorSample</code></pre>
+            </RadzenAlert>
+            <RadzenText TextStyle="TextStyle.Body2">
+                Run the following command from the sample project directory to configure your API secret key:
+            </RadzenText>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet user-secrets set "PayChangu:SecretKey" "&lt;your-paychangu-secret-key&gt;"</code></pre>
+            </RadzenAlert>
+            <RadzenText TextStyle="TextStyle.Body2">
+                Start the application from the same sample project directory:
+            </RadzenText>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet run</code></pre>
+            </RadzenAlert>
+            <RadzenText TextStyle="TextStyle.Body2">
+                Then choose an example from the navigation.
             </RadzenText>
         </RadzenStack>
     </RadzenCard>
@@ -40,13 +69,19 @@
                 Follow the <a href="https://ngrok.com/download" target="_blank" rel="noopener">official ngrok installation guide</a>.
                 Then add the authtoken from your ngrok dashboard:
             </RadzenText>
-            <pre><code>ngrok config add-authtoken "&lt;YOUR_NGROK_AUTHTOKEN&gt;"</code></pre>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">ngrok config add-authtoken "&lt;YOUR_NGROK_AUTHTOKEN&gt;"</code></pre>
+            </RadzenAlert>
 
             <RadzenText TextStyle="TextStyle.Subtitle1">2. Start the sample application</RadzenText>
             <RadzenText TextStyle="TextStyle.Body2">
-                Run the Blazor sample using <code>dotnet run</code>. Keep it running and note the HTTPS
-                local URL printed in the terminal, including its port (for example,
-                <code>https://localhost:7001</code>).
+                Start the Blazor sample from the sample project directory using the <code>dotnet run</code>
+                command shown in Getting started. Keep it running and note the HTTPS local URL printed
+                in the terminal, including its port (for example, <code>https://localhost:7001</code>).
             </RadzenText>
 
             <RadzenText TextStyle="TextStyle.Subtitle1">3. Start the ngrok tunnel</RadzenText>
@@ -54,7 +89,13 @@
                 Open a second terminal and forward ngrok to the HTTPS URL and port used by your application.
                 Replace the example port with the one shown when you started the sample:
             </RadzenText>
-            <pre><code>ngrok http https://localhost:7001</code></pre>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">ngrok http https://localhost:7001</code></pre>
+            </RadzenAlert>
             <RadzenText TextStyle="TextStyle.Body2">
                 ngrok will display a public HTTPS forwarding address. Keep this terminal open while testing;
                 closing it stops the tunnel.
@@ -65,7 +106,13 @@
                 In your PayChangu dashboard, configure the webhook URL using the public HTTPS address
                 provided by ngrok, followed by this endpoint path:
             </RadzenText>
-            <pre><code>https://&lt;your-ngrok-domain&gt;/api/webhooks/paychangu</code></pre>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">https://&lt;your-ngrok-domain&gt;/api/webhooks/paychangu</code></pre>
+            </RadzenAlert>
             <RadzenText TextStyle="TextStyle.Body2">
                 Enable the event notifications you want to test. This sample handles Standard Checkout
                 (<code>checkout.payment</code>), Direct Charge (<code>api.charge.payment</code>), and
@@ -79,6 +126,9 @@
                 <code>Signature</code> header on incoming requests.
             </RadzenText>
             <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
                          Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
                 <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet user-secrets set "PayChangu:WebhookSecret" "&lt;your-webhook-secret&gt;"</code></pre>
             </RadzenAlert>
@@ -87,7 +137,10 @@
                 sample after changing the secret so the application loads the updated configuration.
             </RadzenText>
 
-            <RadzenAlert AlertStyle="AlertStyle.Info">
+            <RadzenAlert AlertStyle="AlertStyle.Info"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat">
                 Once both the application and ngrok tunnel are running and the webhook is registered,
                 trigger a test payment or payout. Open the Webhooks page to view accepted events.
             </RadzenAlert>
