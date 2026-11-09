@@ -443,10 +443,10 @@ The SDK sets the payment method to `mobile_bank_transfer`; you do not need to se
 
 ### Retrieving Bank Transfer Direct Charge Details
 
-Use `GetSingleBankDirectChargeDetailsAsync` with the charge identifier to retrieve the transaction details:
+Use `GetSingleBankTransferDirectChargeDetailsAsync` with the charge identifier to retrieve the transaction details:
 
 ```csharp
-var detailsResponse = await _payChanguClient.GetSingleBankDirectChargeDetailsAsync(
+var detailsResponse = await _payChanguClient.GetSingleBankTransferDirectChargeDetailsAsync(
     chargeId,
     cancellationToken);
 
