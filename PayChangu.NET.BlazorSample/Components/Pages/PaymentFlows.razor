@@ -31,13 +31,24 @@
                                    Format="N2"
                                    Style="width: 100%" />
                 </RadzenColumn>
-                <RadzenColumn Size="12" SizeMD="6">
-                    <RadzenText TextStyle="TextStyle.Subtitle2">Currency</RadzenText>
-                    <RadzenDropDown TValue="PayChanguCurrency"
-                                    Data="@currencies"
-                                    @bind-Value="currency"
-                                    Style="width: 100%" />
-                </RadzenColumn>
+                @if (selectedPaymentFlow != "Mobile Money Direct Charge")
+                {
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Subtitle2">Currency</RadzenText>
+                        <RadzenDropDown TValue="PayChanguCurrency"
+                                        Data="@currencies"
+                                        @bind-Value="currency"
+                                        Style="width: 100%" />
+                    </RadzenColumn>
+                }
+                else
+                {
+                    <RadzenColumn Size="12">
+                        <RadzenText TextStyle="TextStyle.Caption">
+                            The currency for Mobile Money Direct Charge is determined by the selected operator.
+                        </RadzenText>
+                    </RadzenColumn>
+                }
             </RadzenRow>
 
             @if (selectedPaymentFlow == "Standard Checkout")
@@ -175,11 +186,12 @@
                 </RadzenAlert>
                 <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
                 <RadzenText TextStyle="TextStyle.Body2">@chargeId</RadzenText>
-                @if (!string.IsNullOrWhiteSpace(transactionIdentifier))
+                @if (!string.IsNullOrWhiteSpace(providerReference))
                 {
-                    <RadzenText TextStyle="TextStyle.Subtitle2">Transaction reference</RadzenText>
-                    <RadzenText TextStyle="TextStyle.Body2">@transactionIdentifier</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Provider reference</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@providerReference</RadzenText>
                 }
+                <a href="/transactions">Open transaction verification</a>
                 @if (!string.IsNullOrWhiteSpace(paymentStatus))
                 {
                     <RadzenText TextStyle="TextStyle.Subtitle2">Current status</RadzenText>
@@ -228,6 +240,7 @@
     private string? checkoutUrl;
     private string? chargeId;
     private string? transactionIdentifier;
+    private string? providerReference;
     private string? paymentStatus;
     private string? paymentInstructions;
 
@@ -272,6 +285,7 @@
         checkoutUrl = null;
         chargeId = null;
         transactionIdentifier = null;
+        providerReference = null;
         paymentStatus = null;
         paymentInstructions = null;
 
@@ -391,7 +405,7 @@
         }
 
         chargeId = data.ChargeId;
-        transactionIdentifier = data.ReferenceId;
+        providerReference = data.ReferenceId;
         paymentStatus = data.Status;
     }
 
@@ -420,7 +434,7 @@
         }
 
         chargeId = data.Transaction.ChargeId;
-        transactionIdentifier = data.Transaction.ReferenceId;
+        providerReference = data.Transaction.ReferenceId;
         paymentStatus = data.Transaction.Status;
         paymentInstructions =
             $"{data.PaymentAccountDetails.BankName} — " +
