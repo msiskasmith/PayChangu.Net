@@ -671,8 +671,8 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <remarks>
     /// HTTP errors, empty response bodies, and JSON deserialization failures
     /// are represented by a failed <see cref="PayChanguApiResponse{T}"/>.
-    /// HTTP transport exceptions and cancellation exceptions are not caught
-    /// and will propagate to the caller.
+    /// HTTP transport exceptions are logged and rethrown. Cancellation
+    /// exceptions are not caught and propagate to the caller.
     /// </remarks>
     private async Task<HttpResponseMessage> SendHttpRequestAsync(
         HttpRequestMessage httpRequest,
