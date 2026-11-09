@@ -32,7 +32,8 @@ public sealed class InitiateCheckoutRequest
     /// </remarks>
     /// <example>MWK</example>
     [JsonPropertyName("currency")]
-    public string Currency { get; set; } = "MWK";
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public PayChanguCurrency Currency { get; set; } = PayChanguCurrency.MWK;
 
     /// <summary>
     /// Gets or sets the customer's email address.

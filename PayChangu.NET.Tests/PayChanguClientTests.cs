@@ -38,7 +38,7 @@ public sealed class PayChanguClientTests
         return new InitiateCheckoutRequest
         {
             Amount = 5000,
-            Currency = "MWK",
+            Currency = PayChanguCurrency.MWK,
             Email = "customer@example.com",
             FirstName = "John",
             LastName = "Banda",
@@ -67,7 +67,7 @@ public sealed class PayChanguClientTests
             Cvv = "123",
             CardholderName = "John Banda",
             Amount = 5000,
-            Currency = "MWK",
+            Currency = PayChanguCurrency.MWK,
             ChargeId = "card-charge-001",
             RedirectUrl = "https://example.com/redirect",
             Email = "john@example.com"
@@ -3235,7 +3235,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetBalanceAsync("USD");
+        var result = await client.GetBalanceAsync(PayChanguCurrency.USD);
 
         // Assert
         Assert.Equal(
@@ -3408,7 +3408,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSupportedBanksAsync("MWK");
+        var response = await client.GetSupportedBanksAsync(PayChanguCurrency.MWK);
 
         // Assert
         Assert.True(response.Success);
@@ -3458,7 +3458,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSupportedBanksAsync("MWK");
+        await client.GetSupportedBanksAsync(PayChanguCurrency.MWK);
 
         // Assert
         Assert.Equal(
@@ -3485,7 +3485,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSupportedBanksAsync("MWK");
+        var response = await client.GetSupportedBanksAsync(PayChanguCurrency.MWK);
 
         // Assert
         Assert.False(response.Success);
@@ -3494,29 +3494,6 @@ public sealed class PayChanguClientTests
         Assert.Contains("Unable to deserialize", response.ErrorMessage);
         Assert.Null(response.Result);
         Assert.Equal(json, response.RawJsonResponse);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData("   ")]
-    public async Task GetSupportedBanksAsync_ThrowsArgumentException_WhenCurrencyIsEmpty(
-    string currency)
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler();
-
-        using var serviceProvider = CreateServiceProvider(handler);
-
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => client.GetSupportedBanksAsync(currency));
-
-        // Assert
-        Assert.Equal("currency", exception.ParamName);
-        Assert.Null(handler.RequestUri);
     }
 
     [Fact]

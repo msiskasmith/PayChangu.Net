@@ -360,14 +360,11 @@ public interface IPayChanguClient
     /// A response containing the wallet balance, or failure details
     /// if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the currency is null, empty, or consists only of whitespace.
-    /// </exception>
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is cancelled.
     /// </exception>
     Task<PayChanguApiResponse<GetBalanceResponse>> GetBalanceAsync(
-        string currency = "MWK",
+        PayChanguCurrency currency = PayChanguCurrency.MWK,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -392,7 +389,7 @@ public interface IPayChanguClient
     /// </exception>
     Task<PayChanguApiResponse<GetSupportedBanksResponse>>
         GetSupportedBanksAsync(
-            string currency = "MWK",
+            PayChanguCurrency currency = PayChanguCurrency.MWK,
             CancellationToken cancellationToken = default);
 }
 
@@ -939,19 +936,12 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetBalanceResponse>>
         GetBalanceAsync(
-            string currency = "MWK",
+            PayChanguCurrency currency = PayChanguCurrency.MWK,
             CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(currency))
-        {
-            throw new ArgumentException(
-                "Currency cannot be null or empty.",
-                nameof(currency));
-        }
-
         var endpoint = PayChanguApiEndpoints.Account.GetBalance.Replace(
             "{iso}",
-            Uri.EscapeDataString(currency));
+            Uri.EscapeDataString(currency.ToString()));
 
         return await GetAsync<GetBalanceResponse>(
             endpoint,
@@ -962,18 +952,11 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetSupportedBanksResponse>>
         GetSupportedBanksAsync(
-            string currency,
+            PayChanguCurrency currency = PayChanguCurrency.MWK,
             CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(currency))
-            {
-                throw new ArgumentException(
-                    "Currency cannot be null, empty, or whitespace.",
-                    nameof(currency));
-            }
-
             var endpoint = PayChanguApiEndpoints.Payout.GetBanks
-                .Replace("{iso}", Uri.EscapeDataString(currency));
+                .Replace("{iso}", Uri.EscapeDataString(currency.ToString()));
 
             return await GetAsync<GetSupportedBanksResponse>(
                 endpoint,

@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+
+
 namespace PayChangu.NET.Models;
 
 /// <summary>
@@ -42,7 +44,8 @@ public sealed class InitiateCardDirectChargeRequest
     /// Gets or sets the transaction currency.
     /// </summary>
     [JsonPropertyName("currency")]
-    public string Currency { get; set; } = null!;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public PayChanguCurrency Currency { get; set; } = PayChanguCurrency.MWK;
 
     /// <summary>
     /// Gets or sets the unique charge identifier.
