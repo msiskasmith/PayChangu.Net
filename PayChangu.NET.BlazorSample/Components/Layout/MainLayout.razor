@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@inject IConfiguration Configuration
 
 <RadzenComponents @rendermode="InteractiveAuto" />
 
@@ -29,7 +30,14 @@
 
     <RadzenBody>
         <main class="rz-p-4 rz-p-md-6">
-            @Body
+            @if (string.IsNullOrWhiteSpace(Configuration["PayChangu:SecretKey"]))
+            {
+                <PayChanguConfigurationNotice />
+            }
+            else
+            {
+                @Body
+            }
         </main>
     </RadzenBody>
 
