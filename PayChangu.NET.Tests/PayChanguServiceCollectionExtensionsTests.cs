@@ -63,7 +63,7 @@ public sealed class PayChanguServiceCollectionExtensionsTests
         await client.InitiateCheckoutAsync(new Models.InitiateCheckoutRequest
         {
             Amount = 5000,
-            Currency = "MWK",
+            Currency = PayChanguCurrency.MWK,
             Email = "customer@example.com",
             FirstName = "John",
             LastName = "Banda",
