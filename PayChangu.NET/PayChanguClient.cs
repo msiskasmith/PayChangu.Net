@@ -392,7 +392,7 @@ public interface IPayChanguClient
     /// </exception>
     Task<PayChanguApiResponse<GetSupportedBanksResponse>>
         GetSupportedBanksAsync(
-            string currency = "MWK",
+            PayChanguCurrency currency = PayChanguCurrency.MWK,
             CancellationToken cancellationToken = default);
 }
 
