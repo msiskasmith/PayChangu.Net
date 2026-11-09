@@ -51,7 +51,7 @@ public interface IPayChanguClient
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is cancelled.
     /// </exception>
-    Task<PayChanguApiResponse<InitiateCheckoutResponse>> InitiatePaymentAsync(
+    Task<PayChanguApiResponse<InitiateCheckoutResponse>> InitiateCheckoutAsync(
         InitiateCheckoutRequest request,
         CancellationToken cancellationToken = default);
 
@@ -432,7 +432,7 @@ internal sealed class PayChanguClient : IPayChanguClient
 
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<InitiateCheckoutResponse>>
-        InitiatePaymentAsync(
+        InitiateCheckoutAsync(
             InitiateCheckoutRequest request,
             CancellationToken cancellationToken = default)
     {
