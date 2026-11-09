@@ -123,6 +123,63 @@ Registration provides the following services:
 
 Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
 
+## Wallet Balance
+
+PayChangu.NET provides `GetBalanceAsync` to retrieve wallet balance information for a specified currency.
+
+### Retrieving the wallet balance
+
+The currency defaults to `MWK`. You can also specify `USD` or `ZMW` by passing `PayChanguCurrency.USD` or `PayChanguCurrency.ZMW`.
+
+```csharp
+var response = await _payChanguClient.GetBalanceAsync(
+    cancellationToken: cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var balance = response.Result.Data;
+
+// Access the wallet balance information.
+var environment = balance.Environment;
+var currency = balance.Currency;
+var mainBalance = balance.MainBalance;
+var collectionBalance = balance.CollectionBalance;
+```
+
+To retrieve the balance for a different currency:
+
+```csharp
+var response = await _payChanguClient.GetBalanceAsync(
+    PayChanguCurrency.USD,
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+var balance = response.Result.Data;
+
+var currency = balance.Currency;
+var mainBalance = balance.MainBalance;
+var collectionBalance = balance.CollectionBalance;
+```
+
+The returned `BalanceData` contains:
+
+- `Environment` — the PayChangu environment associated with the wallet.
+- `Currency` — the currency of the retrieved balance.
+- `MainBalance` — the main wallet balance, returned as a string.
+- `CollectionBalance` — the collection wallet balance, represented as a decimal.
+
+**Note:** The method performs a balance retrieval request. It does not initiate a payout or transfer funds.
+
 ## Standard Checkout
 
 Standard Checkout allows you to initiate a payment and redirect the customer to a PayChangu-hosted checkout page.
@@ -330,81 +387,6 @@ The returned `PayChanguTransaction` provides information such as the charge iden
 
 **Important:** Retrieving transaction details does not replace payment verification. When deciding whether to fulfil an order, use `VerifyPaymentAsync` and validate the returned `VerifyPaymentResponse` against your expected transaction identifier, currency, and amount using the `IsValid` extension method.
 
-## Mobile Money Payout
-
-PayChangu.NET supports initiating Mobile Money payouts using `InitiateMobileMoneyPayoutAsync`. This allows your application to send funds to a recipient's mobile money account.
-
-### Initiating a Mobile Money Payout
-
-First, retrieve the supported mobile money operators using `GetMobileMoneyOperatorsAsync`. Use the selected operator's `RefId` when creating the payout request.
-
-```csharp
-var operatorsResponse = await _payChanguClient.GetMobileMoneyOperatorsAsync(
-    cancellationToken);
-
-if (!operatorsResponse.Success || operatorsResponse.Result == null)
-{
-    // Handle the unsuccessful API response.
-    return;
-}
-
-// Select the appropriate operator.
-var operatorRefId = operatorsResponse.Result.Data
-    .First(x => x.Name == "Airtel Money")
-    .RefId;
-```
-
-Create an `InitiateMobileMoneyPayoutRequest` and pass it to `InitiateMobileMoneyPayoutAsync`:
-
-```csharp
-var request = new InitiateMobileMoneyPayoutRequest
-{
-    Mobile = "+265992123456",
-    MobileMoneyOperatorRefId = operatorRefId,
-    Amount = 5000m,
-    ChargeId = Guid.NewGuid().ToString(),
-    Email = "recipient@example.com",
-    FirstName = "John",
-    LastName = "Banda"
-};
-
-var response = await _payChanguClient.InitiateMobileMoneyPayoutAsync(
-    request,
-    cancellationToken);
-
-if (!response.Success || response.Result?.Data == null)
-{
-    // Handle the unsuccessful API response.
-    // Inspect response.ErrorMessage and response.StatusCode.
-    return;
-}
-
-var transaction = response.Result.Data;
-
-// Access the payout transaction details.
-var chargeId = transaction.ChargeId;
-var referenceId = transaction.ReferenceId;
-var status = transaction.Status;
-var amount = transaction.Amount;
-var currency = transaction.Currency;
-
-// Access the mobile money operator details.
-var operatorName = transaction.MobileMoney?.Name;
-var operatorCountry = transaction.MobileMoney?.Country;
-```
-
-The request requires the recipient's mobile number, mobile money operator reference ID, payout amount, and a unique charge identifier. Recipient name and email details are optional.
-
-The response provides the payout transaction details, including the PayChangu reference ID, transaction status, recipient mobile number, operator information, transaction charges, authorization details, and timestamps.
-
-### Sandbox testing
-
-The request supports an optional `TransactionStatus` property for simulating payout outcomes in PayChangu's sandbox environment.
-
-Accepted values are `"failed"` and `"successful"`. Do not set this property when using the production environment.
-
-**Important:** A successful API response does not necessarily mean the payout has been completed. Inspect the returned transaction status and handle payout notifications through your configured webhook endpoint. The SDK recognizes the `api.payout` webhook event for payout notifications.
-
 ## Bank Transfer Direct Charge
 
 PayChangu.NET supports Bank Transfer Direct Charge payments. This flow generates bank account details that the customer can use to complete a payment.
@@ -503,6 +485,195 @@ if (!verificationResponse.Success ||
 ```
 
 **Important:** Always verify the transaction and confirm its final status before fulfilling an order. Do not treat the initiation response or the generated bank account details as proof of payment.
+
+## Card Direct Charge
+
+PayChangu.NET supports Card Direct Charge payments, including transactions that require 3-D Secure (3DS) authentication.
+
+### Initiating a Card Direct Charge
+
+Create an `InitiateCardDirectChargeRequest` and pass it to `InitiateCardChargeAsync`.
+
+```csharp
+var chargeId = Guid.NewGuid().ToString();
+
+var request = new InitiateCardDirectChargeRequest
+{
+    CardNumber = cardNumber,
+    Expiry = cardExpiry,
+    Cvv = cardCvv,
+    CardholderName = "John Banda",
+    Amount = 5000m,
+    Currency = PayChanguCurrency.MWK,
+    ChargeId = chargeId,
+    RedirectUrl = "https://example.com/payments/card/return",
+    Email = "customer@example.com"
+};
+
+var response = await _payChanguClient.InitiateCardChargeAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var chargeResponse = response.Result;
+
+if (!chargeResponse.Success)
+{
+    // PayChangu did not accept the card charge.
+    return;
+}
+
+if (chargeResponse.Requires3DSAuth &&
+    !string.IsNullOrWhiteSpace(chargeResponse.ThreeDSAuthLink))
+{
+    // Redirect the customer to complete 3-D Secure authentication.
+    return Redirect(chargeResponse.ThreeDSAuthLink);
+}
+
+// Continue with transaction verification.
+```
+
+The request includes the card details, amount, currency, charge identifier, redirect URL, and optional customer email.
+
+### Handling 3-D Secure authentication
+
+When `Requires3DSAuth` is `true`, redirect the customer to `ThreeDSAuthLink` to complete the authentication process.
+
+PayChangu uses the supplied `RedirectUrl` to return the customer to your application after the authentication process.
+
+If 3DS authentication is not required, proceed directly to transaction verification.
+
+**Important:** A successful initiation response does not confirm that the payment has been completed. Do not fulfil an order based solely on the initiation response or the customer's return to your application.
+
+### Verifying the card transaction
+
+Use `VerifyPaymentAsync` with the charge identifier and the Card Direct Charge payment flow:
+
+```csharp
+var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+    chargeId,
+    PayChanguPaymentFlow.DirectCharge,
+    PayChanguPaymentMethod.Card,
+    cancellationToken);
+
+if (!verificationResponse.Success ||
+    !verificationResponse.Result.IsValid(chargeId, "MWK", 5000m))
+{
+    // The verification request failed or the payment details did not match.
+    return;
+}
+
+// The transaction status, identifier, currency, and amount are valid.
+// Continue with order fulfilment.
+```
+
+The `IsValid` extension method checks the transaction status, identifier, currency, and amount against your expected values.
+
+### Refunding a card transaction
+
+Use `RefundCardChargeAsync` with the charge identifier of the card transaction:
+
+```csharp
+var refundResponse = await _payChanguClient.RefundCardChargeAsync(
+    chargeId,
+    cancellationToken);
+
+if (!refundResponse.Success)
+{
+    // Handle the unsuccessful refund request.
+    // Inspect refundResponse.ErrorMessage and refundResponse.StatusCode.
+    return;
+}
+
+// PayChangu accepted the refund request with HTTP 200.
+```
+
+The SDK considers the refund request successful when PayChangu returns HTTP 200. The response body is not deserialized.
+
+**Important:** A successful refund request response should not automatically be treated as confirmation that the funds have been returned to the customer. Handle the refund according to the applicable PayChangu transaction and reconciliation process.
+
+**Security:** Never log or expose card numbers or CVVs. Handle card details securely and avoid storing sensitive card verification data.
+
+## Mobile Money Payout
+
+PayChangu.NET supports initiating Mobile Money payouts using `InitiateMobileMoneyPayoutAsync`. This allows your application to send funds to a recipient's mobile money account.
+
+### Initiating a Mobile Money Payout
+
+First, retrieve the supported mobile money operators using `GetMobileMoneyOperatorsAsync`. Use the selected operator's `RefId` when creating the payout request.
+
+```csharp
+var operatorsResponse = await _payChanguClient.GetMobileMoneyOperatorsAsync(
+    cancellationToken);
+
+if (!operatorsResponse.Success || operatorsResponse.Result == null)
+{
+    // Handle the unsuccessful API response.
+    return;
+}
+
+// Select the appropriate operator.
+var operatorRefId = operatorsResponse.Result.Data
+    .First(x => x.Name == "Airtel Money")
+    .RefId;
+```
+
+Create an `InitiateMobileMoneyPayoutRequest` and pass it to `InitiateMobileMoneyPayoutAsync`:
+
+```csharp
+var request = new InitiateMobileMoneyPayoutRequest
+{
+    Mobile = "+265992123456",
+    MobileMoneyOperatorRefId = operatorRefId,
+    Amount = 5000m,
+    ChargeId = Guid.NewGuid().ToString(),
+    Email = "recipient@example.com",
+    FirstName = "John",
+    LastName = "Banda"
+};
+
+var response = await _payChanguClient.InitiateMobileMoneyPayoutAsync(
+    request,
+    cancellationToken);
+
+if (!response.Success || response.Result?.Data == null)
+{
+    // Handle the unsuccessful API response.
+    // Inspect response.ErrorMessage and response.StatusCode.
+    return;
+}
+
+var transaction = response.Result.Data;
+
+// Access the payout transaction details.
+var chargeId = transaction.ChargeId;
+var referenceId = transaction.ReferenceId;
+var status = transaction.Status;
+var amount = transaction.Amount;
+var currency = transaction.Currency;
+
+// Access the mobile money operator details.
+var operatorName = transaction.MobileMoney?.Name;
+var operatorCountry = transaction.MobileMoney?.Country;
+```
+
+The request requires the recipient's mobile number, mobile money operator reference ID, payout amount, and a unique charge identifier. Recipient name and email details are optional.
+
+The response provides the payout transaction details, including the PayChangu reference ID, transaction status, recipient mobile number, operator information, transaction charges, authorization details, and timestamps.
+
+### Sandbox testing
+
+The request supports an optional `TransactionStatus` property for simulating payout outcomes in PayChangu's sandbox environment.
+
+Accepted values are `"failed"` and `"successful"`. Do not set this property when using the production environment.
+
+**Important:** A successful API response does not necessarily mean the payout has been completed. Inspect the returned transaction status and handle payout notifications through your configured webhook endpoint. The SDK recognizes the `api.payout` webhook event for payout notifications.
 
 ## Supported Banks and Payout Providers
 
@@ -697,177 +868,6 @@ The response includes the current page, total pages, page size, next page URL, a
 **Important:** `GetAllBankPayoutDetailsAsync` retrieves only the page returned by the API. It does not automatically fetch subsequent pages. Use the pagination information to manage additional page retrieval separately.
 
 **Payout notifications:** Bank payouts use the `api.payout` webhook event. Configure your webhook endpoint and process payout notifications to track transaction outcomes. Do not treat an accepted payout request or a pending transaction as confirmation that funds have reached the recipient.
-
-## Card Direct Charge
-
-PayChangu.NET supports Card Direct Charge payments, including transactions that require 3-D Secure (3DS) authentication.
-
-### Initiating a Card Direct Charge
-
-Create an `InitiateCardDirectChargeRequest` and pass it to `InitiateCardChargeAsync`.
-
-```csharp
-var chargeId = Guid.NewGuid().ToString();
-
-var request = new InitiateCardDirectChargeRequest
-{
-    CardNumber = cardNumber,
-    Expiry = cardExpiry,
-    Cvv = cardCvv,
-    CardholderName = "John Banda",
-    Amount = 5000m,
-    Currency = PayChanguCurrency.MWK,
-    ChargeId = chargeId,
-    RedirectUrl = "https://example.com/payments/card/return",
-    Email = "customer@example.com"
-};
-
-var response = await _payChanguClient.InitiateCardChargeAsync(
-    request,
-    cancellationToken);
-
-if (!response.Success || response.Result == null)
-{
-    // Handle the unsuccessful API response.
-    // Inspect response.ErrorMessage and response.StatusCode.
-    return;
-}
-
-var chargeResponse = response.Result;
-
-if (!chargeResponse.Success)
-{
-    // PayChangu did not accept the card charge.
-    return;
-}
-
-if (chargeResponse.Requires3DSAuth &&
-    !string.IsNullOrWhiteSpace(chargeResponse.ThreeDSAuthLink))
-{
-    // Redirect the customer to complete 3-D Secure authentication.
-    return Redirect(chargeResponse.ThreeDSAuthLink);
-}
-
-// Continue with transaction verification.
-```
-
-The request includes the card details, amount, currency, charge identifier, redirect URL, and optional customer email.
-
-### Handling 3-D Secure authentication
-
-When `Requires3DSAuth` is `true`, redirect the customer to `ThreeDSAuthLink` to complete the authentication process.
-
-PayChangu uses the supplied `RedirectUrl` to return the customer to your application after the authentication process.
-
-If 3DS authentication is not required, proceed directly to transaction verification.
-
-**Important:** A successful initiation response does not confirm that the payment has been completed. Do not fulfil an order based solely on the initiation response or the customer's return to your application.
-
-### Verifying the card transaction
-
-Use `VerifyPaymentAsync` with the charge identifier and the Card Direct Charge payment flow:
-
-```csharp
-var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
-    chargeId,
-    PayChanguPaymentFlow.DirectCharge,
-    PayChanguPaymentMethod.Card,
-    cancellationToken);
-
-if (!verificationResponse.Success ||
-    !verificationResponse.Result.IsValid(chargeId, "MWK", 5000m))
-{
-    // The verification request failed or the payment details did not match.
-    return;
-}
-
-// The transaction status, identifier, currency, and amount are valid.
-// Continue with order fulfilment.
-```
-
-The `IsValid` extension method checks the transaction status, identifier, currency, and amount against your expected values.
-
-### Refunding a card transaction
-
-Use `RefundCardChargeAsync` with the charge identifier of the card transaction:
-
-```csharp
-var refundResponse = await _payChanguClient.RefundCardChargeAsync(
-    chargeId,
-    cancellationToken);
-
-if (!refundResponse.Success)
-{
-    // Handle the unsuccessful refund request.
-    // Inspect refundResponse.ErrorMessage and refundResponse.StatusCode.
-    return;
-}
-
-// PayChangu accepted the refund request with HTTP 200.
-```
-
-The SDK considers the refund request successful when PayChangu returns HTTP 200. The response body is not deserialized.
-
-**Important:** A successful refund request response should not automatically be treated as confirmation that the funds have been returned to the customer. Handle the refund according to the applicable PayChangu transaction and reconciliation process.
-
-**Security:** Never log or expose card numbers or CVVs. Handle card details securely and avoid storing sensitive card verification data.
-
-## Wallet Balance
-
-PayChangu.NET provides `GetBalanceAsync` to retrieve wallet balance information for a specified currency.
-
-### Retrieving the wallet balance
-
-The currency defaults to `MWK`. You can also specify `USD` or `ZMW` by passing `PayChanguCurrency.USD` or `PayChanguCurrency.ZMW`.
-
-```csharp
-var response = await _payChanguClient.GetBalanceAsync(
-    cancellationToken: cancellationToken);
-
-if (!response.Success || response.Result?.Data == null)
-{
-    // Handle the unsuccessful API response.
-    // Inspect response.ErrorMessage and response.StatusCode.
-    return;
-}
-
-var balance = response.Result.Data;
-
-// Access the wallet balance information.
-var environment = balance.Environment;
-var currency = balance.Currency;
-var mainBalance = balance.MainBalance;
-var collectionBalance = balance.CollectionBalance;
-```
-
-To retrieve the balance for a different currency:
-
-```csharp
-var response = await _payChanguClient.GetBalanceAsync(
-    PayChanguCurrency.USD,
-    cancellationToken);
-
-if (!response.Success || response.Result?.Data == null)
-{
-    // Handle the unsuccessful API response.
-    return;
-}
-
-var balance = response.Result.Data;
-
-var currency = balance.Currency;
-var mainBalance = balance.MainBalance;
-var collectionBalance = balance.CollectionBalance;
-```
-
-The returned `BalanceData` contains:
-
-- `Environment` — the PayChangu environment associated with the wallet.
-- `Currency` — the currency of the retrieved balance.
-- `MainBalance` — the main wallet balance, returned as a string.
-- `CollectionBalance` — the collection wallet balance, represented as a decimal.
-
-**Note:** The method performs a balance retrieval request. It does not initiate a payout or transfer funds.
 
 ## Webhooks
 
