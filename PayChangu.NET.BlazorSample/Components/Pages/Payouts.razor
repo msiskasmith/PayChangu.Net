@@ -195,7 +195,32 @@
     private async Task OnCurrencyChanged(object value)
     {
         currency = (PayChanguCurrency)value;
+        await LoadMobileMoneyOperatorsAsync();
         await LoadSupportedBanksAsync();
+    }
+
+    private async Task LoadMobileMoneyOperatorsAsync()
+    {
+        var response = await payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync();
+
+        if (response.Success && response.Result?.Data is { } operators)
+        {
+            mobileMoneyOperators.Clear();
+            mobileMoneyOperators.AddRange(operators.Where(x =>
+                x.SupportsWithdrawals &&
+                string.Equals(x.SupportedCountry.Currency, currency.ToString(),
+                    StringComparison.OrdinalIgnoreCase)));
+
+            if (!mobileMoneyOperators.Any(x => x.RefId == selectedOperatorRefId))
+            {
+                selectedOperatorRefId = mobileMoneyOperators.FirstOrDefault()?.RefId;
+            }
+        }
+        else
+        {
+            referenceDataError = response.ErrorMessage ??
+                "Unable to retrieve Mobile Money payout operators.";
+        }
     }
 
     private async Task LoadReferenceDataAsync()
@@ -205,18 +230,7 @@
 
         try
         {
-            var operatorsResponse = await payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync();
-            if (operatorsResponse.Success && operatorsResponse.Result?.Data is { } operators)
-            {
-                mobileMoneyOperators.AddRange(operators.Where(x => x.SupportsWithdrawals));
-                selectedOperatorRefId = mobileMoneyOperators.FirstOrDefault()?.RefId;
-            }
-            else
-            {
-                referenceDataError = operatorsResponse.ErrorMessage ??
-                    "Unable to retrieve Mobile Money payout operators.";
-            }
-
+            await LoadMobileMoneyOperatorsAsync();
             await LoadSupportedBanksAsync();
         }
         catch (HttpRequestException ex)
