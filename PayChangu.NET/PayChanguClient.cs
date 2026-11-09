@@ -751,6 +751,10 @@ internal sealed class PayChanguClient : IPayChanguClient
 
             if (result == null)
             {
+                _logger.LogWarning(
+                    "PayChangu returned an empty response during operation {Operation}.",
+                    operation);
+
                 return CreateFailure<TResponse>(
                     response.StatusCode,
                     $"PayChangu returned an empty response during {operation}.",
