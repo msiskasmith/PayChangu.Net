@@ -129,7 +129,7 @@
 
                 @if (data.Customer is not null)
                 {
-                    <RadzenDivider />
+                    <hr/>
                     <RadzenText TextStyle="TextStyle.Subtitle2">Customer</RadzenText>
                     <RadzenText TextStyle="TextStyle.Body2">
                         @($"{data.Customer.FirstName} {data.Customer.LastName}".Trim())
@@ -142,7 +142,7 @@
 
                 @if (data.Authorization is not null)
                 {
-                    <RadzenDivider />
+                    <hr/>
                     <RadzenText TextStyle="TextStyle.Subtitle2">Authorization</RadzenText>
                     <RadzenText TextStyle="TextStyle.Body2">
                         Channel: @data.Authorization.Channel
@@ -163,7 +163,7 @@
 
                 @if (data.Logs.Count > 0)
                 {
-                    <RadzenDivider />
+                    <hr/>
                     <RadzenText TextStyle="TextStyle.Subtitle2">Activity logs</RadzenText>
                     @foreach (var log in data.Logs)
                     {
