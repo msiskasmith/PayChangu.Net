@@ -95,6 +95,18 @@
                         before processing direct card charges. PayChangu must also activate Card Direct Charge on your account.
                         Do not use this form for real card details unless your environment meets those requirements.
                     </RadzenAlert>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">PayChangu sandbox test cards</RadzenText>
+                    <RadzenDropDown TValue="string"
+                                    Data="@testCards"
+                                    TextProperty="Label"
+                                    ValueProperty="CardNumber"
+                                    @bind-Value="selectedTestCardNumber"
+                                    Placeholder="Select a test card to autofill"
+                                    Style="width: 100%" />
+                    <RadzenText TextStyle="TextStyle.Caption">
+                        These test cards only work with PayChangu test API keys. All use expiry 12/30 and CVV 123.
+                        The 3-D Secure OTP is 1234. Do not use test card details with live credentials.
+                    </RadzenText>
                     <RadzenText TextStyle="TextStyle.Subtitle2">Card details</RadzenText>
                     <RadzenTextBox @bind-Value="cardholderName"
                                    Placeholder="Name on card"
@@ -281,6 +293,16 @@
 
     private readonly List<SupportedMobileMoneyOperator> mobileMoneyOperators = [];
 
+    private readonly TestCard[] testCards =
+    [
+        new("Visa — 3DS Success", "4242424242424242"),
+        new("Visa — 3DS Timeout", "4000000000003220"),
+        new("Visa — 3DS Insufficient", "4000000000009995"),
+        new("Visa — 3DS Declined", "4000000000000002"),
+        new("Mastercard — 3DS Success", "5555555555554444"),
+        new("Mastercard — 3DS Error", "5200000000000008")
+    ];
+
     private string selectedPaymentFlow = "Standard Checkout";
     private PayChanguCurrency currency = PayChanguCurrency.MWK;
     private decimal amount = 5000m;
@@ -290,6 +312,23 @@
     private string mobile = string.Empty;
     private string cardholderName = string.Empty;
     private string cardNumber = string.Empty;
+    private string? _selectedTestCardNumber;
+    private string? selectedTestCardNumber
+    {
+        get => _selectedTestCardNumber;
+        set
+        {
+            _selectedTestCardNumber = value;
+
+            var testCard = testCards.FirstOrDefault(card => card.CardNumber == value);
+            if (testCard is not null)
+            {
+                cardNumber = testCard.CardNumber;
+                cardExpiry = "12/30";
+                cardCvv = "123";
+            }
+        }
+    }
     private string cardExpiry = string.Empty;
     private string cardCvv = string.Empty;
     private string cardRedirectUrl = string.Empty;
@@ -343,6 +382,8 @@
             isLoadingOperators = false;
         }
     }
+
+    private sealed record TestCard(string Label, string CardNumber);
 
     private async Task InitiatePaymentAsync()
     {
