@@ -3244,6 +3244,7 @@ public sealed class PayChanguClientTests
 
         Assert.True(result.Success);
         Assert.Equal("USD", result.Result!.Data.Currency);
+        Assert.Equal(100m, result.Result.Data.MainBalance);
     }
 
     [Fact]
