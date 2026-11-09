@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Samples/">
+    <Project Path="PayChangu.NET.BlazorSample/PayChangu.NET.BlazorSample.csproj" Id="7bce7865-afd6-4ad8-86fa-79c5409fd0c0" />
+  </Folder>
   <Project Path="PayChangu.NET.Tests/PayChangu.NET.Tests.csproj" Id="66f0f3c0-ecaa-44f3-b60b-cdf7f8aa1972" />
   <Project Path="PayChangu.NET/PayChangu.NET.csproj" />
 </Solution>
