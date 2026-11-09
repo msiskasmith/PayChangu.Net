@@ -3176,7 +3176,7 @@ public sealed class PayChanguClientTests
                     "data": {
                         "environment": "live",
                         "currency": "MWK",
-                        "main_balance": "953037.95",
+                        "main_balance": 953037.95,
                         "collection_balance": 0
                     }
                 }
@@ -3205,7 +3205,7 @@ public sealed class PayChanguClientTests
 
         Assert.Equal("live", result.Result.Data.Environment);
         Assert.Equal("MWK", result.Result.Data.Currency);
-        Assert.Equal("953037.95", result.Result.Data.MainBalance);
+        Assert.Equal(953037.95m, result.Result.Data.MainBalance);
         Assert.Equal(0m, result.Result.Data.CollectionBalance);
     }
 
@@ -3244,6 +3244,7 @@ public sealed class PayChanguClientTests
 
         Assert.True(result.Success);
         Assert.Equal("USD", result.Result!.Data.Currency);
+        Assert.Equal(100m, result.Result.Data.MainBalance);
     }
 
     [Fact]
