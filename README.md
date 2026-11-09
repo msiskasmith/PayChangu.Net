@@ -25,6 +25,36 @@ PayChangu.NET provides a strongly typed, asynchronous interface for interacting 
 - Standardized API response handling.
 - Webhook signature validation and event parsing.
 
+## Supported Currencies
+
+PayChangu.NET exposes the `PayChanguCurrency` enum for currency values accepted by supported payment requests and currency-specific client methods.
+
+The SDK currently supports:
+
+| Enum value | Currency |
+|---|---|
+| `PayChanguCurrency.MWK` | Malawian Kwacha |
+| `PayChanguCurrency.USD` | United States Dollar |
+| `PayChanguCurrency.ZMW` | Zambian Kwacha |
+
+`MWK` is the default currency for checkout, bank-transfer Direct Charge, card Direct Charge, wallet balance retrieval, and supported-bank lookup where a currency can be specified.
+
+When serializing requests, the SDK writes the enum values as their three-letter currency codes (for example, `"MWK"`, `"USD"`, and `"ZMW"`).
+
+Use the enum when setting a request currency:
+
+```csharp
+using PayChangu.NET;
+
+var request = new InitiateCheckoutRequest
+{
+    Amount = 5000m,
+    Currency = PayChanguCurrency.MWK
+};
+```
+
+Currency values returned by PayChangu remain strings in response models, allowing the SDK to handle currency codes that may be introduced by the API in the future.
+
 ## Installation
 
 Once the package is published, install it using the .NET CLI:
@@ -480,7 +510,7 @@ PayChangu.NET provides `GetSupportedBanksAsync` to retrieve the banks and payout
 
 ### Retrieving supported banks and payout providers
 
-The currency defaults to `MWK`. You can provide another currency code when retrieving providers for a different currency.
+The currency defaults to `MWK`. You can provide another value from `PayChanguCurrency` when retrieving providers for a different currency.
 
 ```csharp
 var response = await _payChanguClient.GetSupportedBanksAsync(
@@ -514,7 +544,7 @@ Use the provider UUID returned by `GetSupportedBanksAsync` as the `BankId` in an
 
 ```csharp
 var banksResponse = await _payChanguClient.GetSupportedBanksAsync(
-    "MWK",
+    PayChanguCurrency.MWK,
     cancellationToken);
 
 if (!banksResponse.Success || banksResponse.Result?.Data == null)
@@ -788,7 +818,7 @@ PayChangu.NET provides `GetBalanceAsync` to retrieve wallet balance information 
 
 ### Retrieving the wallet balance
 
-The currency defaults to `MWK`. You can also specify another currency, such as `USD`.
+The currency defaults to `MWK`. You can also specify `USD` or `ZMW` by passing `PayChanguCurrency.USD` or `PayChanguCurrency.ZMW`.
 
 ```csharp
 var response = await _payChanguClient.GetBalanceAsync(
