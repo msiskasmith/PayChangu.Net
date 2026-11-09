@@ -3496,29 +3496,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, response.RawJsonResponse);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData("   ")]
-    public async Task GetSupportedBanksAsync_ThrowsArgumentException_WhenCurrencyIsEmpty(
-    string currency)
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler();
-
-        using var serviceProvider = CreateServiceProvider(handler);
-
-        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => client.GetSupportedBanksAsync(PayChanguCurrency.MWK));
-
-        // Assert
-        Assert.Equal("currency", exception.ParamName);
-        Assert.Null(handler.RequestUri);
-    }
-
     [Fact]
     public async Task GetBankPayoutDetailsAsync_ReturnsResponse_WhenRequestSucceeds()
     {
