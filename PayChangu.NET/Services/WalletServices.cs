@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace PayChangu.NET;
+
 /// <summary>Provides wallet operations.</summary>
 public interface IPayChanguWalletClient
 {
