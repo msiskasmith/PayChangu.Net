@@ -2,6 +2,7 @@ using PayChangu.NET;
 using PayChangu.NET.BlazorSample.Components;
 using PayChangu.NET.Extensions;
 using PayChangu.NET.Models;
+using PayChangu.NET.BlazorSample.Services;
 using Radzen;
 using System.Text;
 
@@ -12,6 +13,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddRadzenComponents();
+builder.Services.AddSingleton<WebhookEventStore>();
 
 var secretKey = builder.Configuration["PayChangu:SecretKey"];
 
@@ -44,7 +46,8 @@ app.UseAntiforgery();
 
 app.MapPost("/api/webhooks/paychangu", async (
     HttpContext context,
-    ILogger<Program> logger) =>
+    ILogger<Program> logger,
+    WebhookEventStore eventStore) =>
 {
     if (string.IsNullOrWhiteSpace(
         app.Configuration["PayChangu:WebhookSecret"]))
@@ -78,6 +81,8 @@ app.MapPost("/api/webhooks/paychangu", async (
         logger.LogWarning("Rejected a signed PayChangu webhook with an invalid payload.");
         return Results.BadRequest();
     }
+
+    eventStore.Add(webhookEvent);
 
     logger.LogInformation(
         "Received PayChangu webhook. EventType: {EventType}, Flow: {PaymentFlow}, Method: {PaymentMethod}, TransactionIdentifier: {TransactionIdentifier}, Status: {Status}",
