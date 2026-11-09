@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PayChangu.NET.Extensions;
 using PayChangu.NET.Tests.Fakes;
 using System.Net;
