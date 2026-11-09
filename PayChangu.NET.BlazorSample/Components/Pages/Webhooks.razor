@@ -141,7 +141,10 @@
             <RadzenText TextStyle="TextStyle.Body2">
                 Configure the webhook secret using .NET User Secrets:
             </RadzenText>
-            <pre><code>dotnet user-secrets set "PayChangu:WebhookSecret" "&lt;your-webhook-secret&gt;"</code></pre>
+            <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+                <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet user-secrets set "PayChangu:WebhookSecret" "&lt;your-webhook-secret&gt;"</code></pre>
+            </RadzenAlert>
             <RadzenText TextStyle="TextStyle.Body2">
                 The endpoint returns HTTP 503 until a webhook secret is configured.
             </RadzenText>
