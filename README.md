@@ -118,21 +118,21 @@ The SDK automatically configures Bearer token authentication and the JSON `Accep
 
 Registration provides the following services:
 
-- `IPayChanguClient` — communicates with the PayChangu API.
+- `IPayChanguClient` — exposes grouped API operations through `Checkout`, `DirectCharges`, `Payouts`, `Transactions`, `Wallet`, and `ReferenceData`.
 - `IPayChanguWebhookService` — validates webhook signatures and parses webhook events. A webhook secret must be configured when using this service.
 
 Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
 
 ## Wallet Balance
 
-PayChangu.NET provides `GetBalanceAsync` to retrieve wallet balance information for a specified currency.
+PayChangu.NET provides `Wallet.GetBalanceAsync` to retrieve wallet balance information for a specified currency.
 
 ### Retrieving the wallet balance
 
 The currency defaults to `MWK`. You can also specify `USD` or `ZMW` by passing `PayChanguCurrency.USD` or `PayChanguCurrency.ZMW`.
 
 ```csharp
-var response = await _payChanguClient.GetBalanceAsync(
+var response = await _payChanguClient.Wallet.GetBalanceAsync(
     cancellationToken: cancellationToken);
 
 if (!response.Success || response.Result?.Data == null)
@@ -154,7 +154,7 @@ var collectionBalance = balance.CollectionBalance;
 To retrieve the balance for a different currency:
 
 ```csharp
-var response = await _payChanguClient.GetBalanceAsync(
+var response = await _payChanguClient.Wallet.GetBalanceAsync(
     PayChanguCurrency.USD,
     cancellationToken);
 
@@ -186,7 +186,7 @@ Standard Checkout allows you to initiate a payment and redirect the customer to 
 
 ### Initiating a payment
 
-Inject `IPayChanguClient` into your application service or controller. Create an `InitiateCheckoutRequest` and pass it to `InitiateCheckoutAsync`.
+Inject `IPayChanguClient` into your application service or controller. Create an `InitiateCheckoutRequest` and pass it to `Checkout.InitiateAsync`.
 
 ```csharp
 using System;
@@ -235,7 +235,7 @@ public class PaymentsController : Controller
             }
         };
 
-        var response = await _payChanguClient.InitiateCheckoutAsync(
+        var response = await _payChanguClient.Checkout.InitiateAsync(
             request,
             cancellationToken);
 
@@ -272,10 +272,10 @@ PayChangu.NET supports initiating Mobile Money Direct Charge payments. This send
 
 ### Initiating a Mobile Money Direct Charge
 
-First, retrieve the supported mobile money operators using `GetMobileMoneyOperatorsAsync`. Each operator provides a `RefId` that must be supplied when initiating a charge.
+First, retrieve the supported mobile money operators using `ReferenceData.MobileMoneyOperators.GetAllAsync`. Each operator provides a `RefId` that must be supplied when initiating a charge.
 
 ```csharp
-var operatorsResponse = await _payChanguClient.GetMobileMoneyOperatorsAsync(
+var operatorsResponse = await _payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync(
     cancellationToken);
 
 if (!operatorsResponse.Success || operatorsResponse.Result == null)
@@ -304,7 +304,7 @@ var request = new InitiateMobileMoneyDirectChargeRequest
     LastName = "Banda"
 };
 
-var response = await _payChanguClient.InitiateMobileMoneyDirectChargeAsync(
+var response = await _payChanguClient.DirectCharges.MobileMoney.InitiateAsync(
     request,
     cancellationToken);
 
@@ -324,10 +324,10 @@ var status = response.Result.Data.Status;
 
 A successful initiation response does not mean the customer has completed the payment. The customer must authorize the payment on their mobile device.
 
-Use `VerifyPaymentAsync` with the returned charge identifier to check the transaction status:
+Use `Transactions.VerifyAsync` with the returned charge identifier to check the transaction status:
 
 ```csharp
-var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+var verificationResponse = await _payChanguClient.Transactions.VerifyAsync(
     chargeId,
     PayChanguPaymentFlow.DirectCharge,
     PayChanguPaymentMethod.MobileMoney,
@@ -351,10 +351,10 @@ Use the `IsValid` extension method on `VerifyPaymentResponse` to validate the tr
 
 ### Retrieving Mobile Money Direct Charge details
 
-After initiating a Mobile Money Direct Charge, retrieve its transaction details using `GetSingleMobileMoneyChargeDetailsAsync` and the charge identifier:
+After initiating a Mobile Money Direct Charge, retrieve its transaction details using `DirectCharges.MobileMoney.GetDetailsAsync` and the charge identifier:
 
 ```csharp
-var detailsResponse = await _payChanguClient.GetSingleMobileMoneyChargeDetailsAsync(
+var detailsResponse = await _payChanguClient.DirectCharges.MobileMoney.GetDetailsAsync(
     chargeId,
     cancellationToken);
 
@@ -385,7 +385,7 @@ var completedAt = transaction.CompletedAt;
 
 The returned `PayChanguTransaction` provides information such as the charge identifier, transaction reference, amount, currency, status, customer details, mobile money operator, transaction charges, authorization details, processing logs, and timestamps.
 
-**Important:** Retrieving transaction details does not replace payment verification. When deciding whether to fulfil an order, use `VerifyPaymentAsync` and validate the returned `VerifyPaymentResponse` against your expected transaction identifier, currency, and amount using the `IsValid` extension method.
+**Important:** Retrieving transaction details does not replace payment verification. When deciding whether to fulfil an order, use `Transactions.VerifyAsync` and validate the returned `VerifyPaymentResponse` against your expected transaction identifier, currency, and amount using the `IsValid` extension method.
 
 ## Bank Transfer Direct Charge
 
@@ -393,7 +393,7 @@ PayChangu.NET supports Bank Transfer Direct Charge payments. This flow generates
 
 ### Initiating a Bank Transfer Direct Charge
 
-Create an `InitiateBankTransferDirectChargeRequest` and pass it to `InitiateBankTransferDirectChargeAsync`.
+Create an `InitiateBankTransferDirectChargeRequest` and pass it to `DirectCharges.BankTransfer.InitiateAsync`.
 
 ```csharp
 using System;
@@ -412,7 +412,7 @@ var request = new InitiateBankTransferDirectChargeRequest
     CreatePermanentAccount = false
 };
 
-var response = await _payChanguClient.InitiateBankTransferDirectChargeAsync(
+var response = await _payChanguClient.DirectCharges.BankTransfer.InitiateAsync(
     request,
     cancellationToken);
 
@@ -443,10 +443,10 @@ The SDK sets the payment method to `mobile_bank_transfer`; you do not need to se
 
 ### Retrieving Bank Transfer Direct Charge Details
 
-Use `GetSingleBankTransferDirectChargeDetailsAsync` with the charge identifier to retrieve the transaction details:
+Use `DirectCharges.BankTransfer.GetDetailsAsync` with the charge identifier to retrieve the transaction details:
 
 ```csharp
-var detailsResponse = await _payChanguClient.GetSingleBankTransferDirectChargeDetailsAsync(
+var detailsResponse = await _payChanguClient.DirectCharges.BankTransfer.GetDetailsAsync(
     chargeId,
     cancellationToken);
 
@@ -464,10 +464,10 @@ var status = transactionDetails.Status;
 
 Initiating a Bank Transfer Direct Charge generates the bank account details; it does not mean the customer has completed the payment.
 
-Use `VerifyPaymentAsync` to verify the transaction:
+Use `Transactions.VerifyAsync` to verify the transaction:
 
 ```csharp
-var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+var verificationResponse = await _payChanguClient.Transactions.VerifyAsync(
     chargeId,
     PayChanguPaymentFlow.DirectCharge,
     PayChanguPaymentMethod.BankTransfer,
@@ -492,7 +492,7 @@ PayChangu.NET supports Card Direct Charge payments, including transactions that 
 
 ### Initiating a Card Direct Charge
 
-Create an `InitiateCardDirectChargeRequest` and pass it to `InitiateCardChargeAsync`.
+Create an `InitiateCardDirectChargeRequest` and pass it to `DirectCharges.Card.InitiateAsync`.
 
 ```csharp
 var chargeId = Guid.NewGuid().ToString();
@@ -510,7 +510,7 @@ var request = new InitiateCardDirectChargeRequest
     Email = "customer@example.com"
 };
 
-var response = await _payChanguClient.InitiateCardChargeAsync(
+var response = await _payChanguClient.DirectCharges.Card.InitiateAsync(
     request,
     cancellationToken);
 
@@ -553,10 +553,10 @@ If 3DS authentication is not required, proceed directly to transaction verificat
 
 ### Verifying the card transaction
 
-Use `VerifyPaymentAsync` with the charge identifier and the Card Direct Charge payment flow:
+Use `Transactions.VerifyAsync` with the charge identifier and the Card Direct Charge payment flow:
 
 ```csharp
-var verificationResponse = await _payChanguClient.VerifyPaymentAsync(
+var verificationResponse = await _payChanguClient.Transactions.VerifyAsync(
     chargeId,
     PayChanguPaymentFlow.DirectCharge,
     PayChanguPaymentMethod.Card,
@@ -577,10 +577,10 @@ The `IsValid` extension method checks the transaction status, identifier, curren
 
 ### Refunding a card transaction
 
-Use `RefundCardChargeAsync` with the charge identifier of the card transaction:
+Use `DirectCharges.Card.RefundAsync` with the charge identifier of the card transaction:
 
 ```csharp
-var refundResponse = await _payChanguClient.RefundCardChargeAsync(
+var refundResponse = await _payChanguClient.DirectCharges.Card.RefundAsync(
     chargeId,
     cancellationToken);
 
@@ -602,14 +602,14 @@ The SDK considers the refund request successful when PayChangu returns HTTP 200.
 
 ## Mobile Money Payout
 
-PayChangu.NET supports initiating Mobile Money payouts using `InitiateMobileMoneyPayoutAsync`. This allows your application to send funds to a recipient's mobile money account.
+PayChangu.NET supports initiating Mobile Money payouts using `Payouts.MobileMoney.InitiateAsync`. This allows your application to send funds to a recipient's mobile money account.
 
 ### Initiating a Mobile Money Payout
 
-First, retrieve the supported mobile money operators using `GetMobileMoneyOperatorsAsync`. Use the selected operator's `RefId` when creating the payout request.
+First, retrieve the supported mobile money operators using `ReferenceData.MobileMoneyOperators.GetAllAsync`. Use the selected operator's `RefId` when creating the payout request.
 
 ```csharp
-var operatorsResponse = await _payChanguClient.GetMobileMoneyOperatorsAsync(
+var operatorsResponse = await _payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync(
     cancellationToken);
 
 if (!operatorsResponse.Success || operatorsResponse.Result == null)
@@ -624,7 +624,7 @@ var operatorRefId = operatorsResponse.Result.Data
     .RefId;
 ```
 
-Create an `InitiateMobileMoneyPayoutRequest` and pass it to `InitiateMobileMoneyPayoutAsync`:
+Create an `InitiateMobileMoneyPayoutRequest` and pass it to `Payouts.MobileMoney.InitiateAsync`:
 
 ```csharp
 var request = new InitiateMobileMoneyPayoutRequest
@@ -638,7 +638,7 @@ var request = new InitiateMobileMoneyPayoutRequest
     LastName = "Banda"
 };
 
-var response = await _payChanguClient.InitiateMobileMoneyPayoutAsync(
+var response = await _payChanguClient.Payouts.MobileMoney.InitiateAsync(
     request,
     cancellationToken);
 
@@ -677,14 +677,14 @@ Accepted values are `"failed"` and `"successful"`. Do not set this property when
 
 ## Supported Banks and Payout Providers
 
-PayChangu.NET provides `GetSupportedBanksAsync` to retrieve the banks and payout providers supported by PayChangu for a specified currency.
+PayChangu.NET provides `ReferenceData.Banks.GetSupportedAsync` to retrieve the banks and payout providers supported by PayChangu for a specified currency.
 
 ### Retrieving supported banks and payout providers
 
 The currency defaults to `MWK`. You can provide another value from `PayChanguCurrency` when retrieving providers for a different currency.
 
 ```csharp
-var response = await _payChanguClient.GetSupportedBanksAsync(
+var response = await _payChanguClient.ReferenceData.Banks.GetSupportedAsync(
     PayChanguCurrency.MWK,
     cancellationToken);
 
@@ -711,10 +711,10 @@ Each returned `SupportedBank` contains:
 
 ### Using a provider when initiating a payout
 
-Use the provider UUID returned by `GetSupportedBanksAsync` as the `BankId` in an `InitiateBankPayoutRequest`.
+Use the provider UUID returned by `ReferenceData.Banks.GetSupportedAsync` as the `BankId` in an `InitiateBankPayoutRequest`.
 
 ```csharp
-var banksResponse = await _payChanguClient.GetSupportedBanksAsync(
+var banksResponse = await _payChanguClient.ReferenceData.Banks.GetSupportedAsync(
     PayChanguCurrency.MWK,
     cancellationToken);
 
@@ -753,9 +753,9 @@ PayChangu.NET supports initiating bank payouts, retrieving individual bank payou
 
 ### Initiating a Bank Payout
 
-Create an `InitiateBankPayoutRequest` and pass it to `InitiateBankPayoutAsync`.
+Create an `InitiateBankPayoutRequest` and pass it to `Payouts.Bank.InitiateAsync`.
 
-The `BankId` property expects the UUID of the recipient's bank or payout provider. You can retrieve supported banks and payout providers using `GetSupportedBanksAsync`.
+The `BankId` property expects the UUID of the recipient's bank or payout provider. You can retrieve supported banks and payout providers using `ReferenceData.Banks.GetSupportedAsync`.
 
 ```csharp
 var request = new InitiateBankPayoutRequest
@@ -770,7 +770,7 @@ var request = new InitiateBankPayoutRequest
     LastName = "Kamwendo"
 };
 
-var response = await _payChanguClient.InitiateBankPayoutAsync(
+var response = await _payChanguClient.Payouts.Bank.InitiateAsync(
     request,
     cancellationToken);
 
@@ -802,10 +802,10 @@ A successful initiation response means PayChangu accepted the payout request; it
 
 ### Retrieving an individual bank payout
 
-Use `GetSingleBankPayoutDetailsAsync` with the payout's charge identifier to retrieve its transaction details.
+Use `Payouts.Bank.GetDetailsAsync` with the payout's charge identifier to retrieve its transaction details.
 
 ```csharp
-var detailsResponse = await _payChanguClient.GetSingleBankPayoutDetailsAsync(
+var detailsResponse = await _payChanguClient.Payouts.Bank.GetDetailsAsync(
     chargeId,
     cancellationToken);
 
@@ -832,10 +832,10 @@ The response provides the bank payout transaction, including its status, amount,
 
 ### Retrieving bank payout transactions
 
-Use `GetAllBankPayoutDetailsAsync` to retrieve bank payout transactions.
+Use `Payouts.Bank.GetAllAsync` to retrieve bank payout transactions.
 
 ```csharp
-var payoutsResponse = await _payChanguClient.GetAllBankPayoutDetailsAsync(
+var payoutsResponse = await _payChanguClient.Payouts.Bank.GetAllAsync(
     cancellationToken);
 
 if (!payoutsResponse.Success || payoutsResponse.Result?.Data == null)
@@ -865,7 +865,7 @@ foreach (var transaction in pagination.Transactions)
 
 The response includes the current page, total pages, page size, next page URL, and the transactions returned for that page.
 
-**Important:** `GetAllBankPayoutDetailsAsync` retrieves only the page returned by the API. It does not automatically fetch subsequent pages. Use the pagination information to manage additional page retrieval separately.
+**Important:** `Payouts.Bank.GetAllAsync` retrieves only the page returned by the API. It does not automatically fetch subsequent pages. Use the pagination information to manage additional page retrieval separately.
 
 **Payout notifications:** Bank payouts use the `api.payout` webhook event. Configure your webhook endpoint and process payout notifications to track transaction outcomes. Do not treat an accepted payout request or a pending transaction as confirmation that funds have reached the recipient.
 
@@ -986,7 +986,7 @@ switch (webhookEvent.PaymentFlow)
 }
 ```
 
-`TransactionIdentifier` returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to `VerifyPaymentAsync`.
+`TransactionIdentifier` returns the appropriate identifier for Checkout and Direct Charge events. Although it also exposes the charge identifier for Payout events, payout notifications should be handled through your payout workflow rather than passed to `Transactions.VerifyAsync`.
 
 **Important:** Signature validation confirms that the webhook payload was signed using the configured webhook secret. Your application should still process transaction statuses appropriately, verify payments where applicable, and avoid treating an initiation or pending notification as a completed transaction.
 
@@ -1001,7 +1001,7 @@ For example, you can inspect or parse the raw response using `System.Text.Json`:
 ```csharp
 using System.Text.Json;
 
-var response = await _payChanguClient.VerifyPaymentAsync(
+var response = await _payChanguClient.Transactions.VerifyAsync(
     transactionIdentifier,
     PayChanguPaymentFlow.DirectCharge,
     PayChanguPaymentMethod.MobileMoney,

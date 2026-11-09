@@ -29,370 +29,29 @@ namespace PayChangu.NET;
 /// Register the client using
 /// <see cref="PayChanguServiceCollectionExtensions.AddPayChangu"/>.
 /// </remarks>
+/// <summary>
+/// Provides grouped access to the PayChangu API by business capability.
+/// </summary>
 public interface IPayChanguClient
 {
-    /// <summary>
-    /// Initiates a payment using PayChangu Standard Checkout.
-    /// </summary>
-    /// <param name="request">
-    /// The payment details, including the amount, customer information,
-    /// transaction reference, and checkout configuration.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the checkout URL and details of the created
-    /// payment session, or failure details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<InitiateCheckoutResponse>> InitiateCheckoutAsync(
-        InitiateCheckoutRequest request,
-        CancellationToken cancellationToken = default);
+    /// <summary>Gets the Standard Checkout operations.</summary>
+    IPayChanguCheckoutClient Checkout { get; }
 
-    /// <summary>
-    /// Verifies a PayChangu payment using its transaction reference or charge
-    /// identifier.
-    /// </summary>
-    /// <remarks>
-    /// Supports Standard Checkout and Direct Charge payments using Mobile
-    /// Money, Bank Transfer, or Card. The returned verification data is
-    /// normalized into a common response model.
-    /// </remarks>
-    /// <param name="transactionIdentifier">
-    /// The merchant transaction reference for Checkout, or the PayChangu
-    /// charge identifier for Direct Charge.
-    /// </param>
-    /// <param name="paymentFlow">The payment flow used to initiate the payment.</param>
-    /// <param name="paymentMethod">The payment method used for the payment.</param>
-    /// <param name="cancellationToken">A token used to cancel the operation.</param>
-    /// <returns>
-    /// A normalized payment verification response, or failure details if
-    /// verification was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the transaction identifier is null, empty, or consists
-    /// only of whitespace.
-    /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when an unsupported payment flow or payment method is supplied.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<VerifyPaymentResponse>> VerifyPaymentAsync(
-        string transactionIdentifier,
-        PayChanguPaymentFlow paymentFlow,
-        PayChanguPaymentMethod paymentMethod,
-        CancellationToken cancellationToken = default);
+    /// <summary>Gets the Direct Charge operations grouped by payment method.</summary>
+    IPayChanguDirectChargesClient DirectCharges { get; }
 
-    /// <summary>
-    /// Retrieves the mobile money operators supported by PayChangu.
-    /// </summary>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the supported mobile money operators, or failure
-    /// details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetMobileMoneyOperatorsResponse>>
-        GetMobileMoneyOperatorsAsync(
-            CancellationToken cancellationToken = default);
+    /// <summary>Gets the payout operations grouped by payout method.</summary>
+    IPayChanguPayoutsClient Payouts { get; }
 
-    /// <summary>
-    /// Initiates a Mobile Money Direct Charge payment request.
-    /// </summary>
-    /// <remarks>
-    /// A successful initiation response indicates that PayChangu accepted
-    /// the charge request. It does not confirm that the customer completed
-    /// the payment.
-    /// </remarks>
-    /// <param name="request">The mobile money charge details.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the initiated charge details, or failure
-    /// details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<InitiateMobileMoneyDirectChargeResponse>>
-        InitiateMobileMoneyDirectChargeAsync(
-            InitiateMobileMoneyDirectChargeRequest request,
-            CancellationToken cancellationToken = default);
+    /// <summary>Gets the transaction operations.</summary>
+    IPayChanguTransactionsClient Transactions { get; }
 
-    /// <summary>
-    /// Retrieves the details of a Mobile Money Direct Charge transaction.
-    /// </summary>
-    /// <param name="chargeId">The PayChangu charge identifier.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the transaction details, or failure details
-    /// if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="PayChanguException">
-    /// Thrown when the charge ID is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetMobileMoneyChargeDetailsResponse>>
-        GetSingleMobileMoneyChargeDetailsAsync(
-            string chargeId,
-            CancellationToken cancellationToken = default);
+    /// <summary>Gets the wallet operations.</summary>
+    IPayChanguWalletClient Wallet { get; }
 
-    /// <summary>
-    /// Initiates a Mobile Money payout.
-    /// </summary>
-    /// <remarks>
-    /// A successful initiation response indicates that PayChangu accepted
-    /// the payout request. It does not confirm that the payout was completed.
-    /// The <c>TransactionStatus</c> request property is intended exclusively
-    /// for sandbox testing and must be omitted in production.
-    /// </remarks>
-    /// <param name="request">
-    /// The payout details, including the recipient's mobile number,
-    /// mobile money operator, amount, and charge identifier.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the initiated payout details, or failure
-    /// details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<InitiateMobileMoneyPayoutResponse>>
-        InitiateMobileMoneyPayoutAsync(
-            InitiateMobileMoneyPayoutRequest request,
-            CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Initiates a Bank Transfer Direct Charge payment request.
-    /// </summary>
-    /// <param name="request">The bank transfer charge details.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the bank account details and transaction
-    /// information required to complete the payment, or failure details
-    /// if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<InitiateBankTransferDirectChargeResponse>>
-        InitiateBankTransferDirectChargeAsync(
-            InitiateBankTransferDirectChargeRequest request,
-            CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Initiates a bank payout request.
-    /// </summary>
-    /// <remarks>
-    /// A successful initiation response indicates that PayChangu accepted
-    /// the payout request. It does not confirm that the payout was completed.
-    /// </remarks>
-    /// <param name="request">The bank payout details.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the initiated payout details, or failure
-    /// details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<InitiateBankPayoutResponse>> InitiateBankPayoutAsync(
-        InitiateBankPayoutRequest request,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves the details of a bank payout transaction.
-    /// </summary>
-    /// <param name="chargeId">The PayChangu charge identifier.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the bank payout transaction details, or failure
-    /// details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="PayChanguException">
-    /// Thrown when the charge ID is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetSingleBankPayoutDetailsResponse>>
-        GetSingleBankPayoutDetailsAsync(
-            string chargeId,
-            CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves bank payout transactions.
-    /// </summary>
-    /// <remarks>
-    /// The response is paginated. This method retrieves the page returned
-    /// by the API and does not automatically fetch subsequent pages.
-    /// </remarks>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the paginated bank payout transactions,
-    /// or failure details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetAllBankPayoutDetailsResponse>>
-        GetAllBankPayoutDetailsAsync(
-            CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves the details of a Bank Transfer Direct Charge transaction.
-    /// </summary>
-    /// <param name="chargeId">The PayChangu charge identifier.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the transaction details, or failure details
-    /// if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="PayChanguException">
-    /// Thrown when the charge ID is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
-        GetSingleBankTransferDirectChargeDetailsAsync(
-            string chargeId,
-            CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Initiates a Card Direct Charge payment request.
-    /// </summary>
-    /// <param name="request">The card charge details.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the initiated card charge details and
-    /// information about any required 3-D Secure authentication,
-    /// or failure details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<InitiateCardDirectChargeResponse>> InitiateCardChargeAsync(
-        InitiateCardDirectChargeRequest request,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Refunds a Card Direct Charge transaction.
-    /// </summary>
-    /// <remarks>
-    /// The response indicates success only when PayChangu returns HTTP 200.
-    /// The response body is not deserialized.
-    /// </remarks>
-    /// <param name="chargeId">The PayChangu charge identifier of the transaction to refund.</param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response indicating whether the refund request was successful.
-    /// </returns>
-    /// <exception cref="PayChanguException">
-    /// Thrown when the charge ID is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse> RefundCardChargeAsync(
-        string chargeId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves the wallet balance for the specified currency.
-    /// </summary>
-    /// <param name="currency">
-    /// The wallet currency code. Defaults to <c>MWK</c>.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the wallet balance, or failure details
-    /// if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetBalanceResponse>> GetBalanceAsync(
-        PayChanguCurrency currency = PayChanguCurrency.MWK,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves the banks and payout providers supported by PayChangu
-    /// for the specified currency.
-    /// </summary>
-    /// <param name="currency">
-    /// The currency code used to filter supported providers. Defaults to <c>MWK</c>.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token used to cancel the asynchronous operation.
-    /// </param>
-    /// <returns>
-    /// A response containing the supported banks and payout providers,
-    /// or failure details if the request was unsuccessful.
-    /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the currency is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
-    Task<PayChanguApiResponse<GetSupportedBanksResponse>>
-        GetSupportedBanksAsync(
-            PayChanguCurrency currency = PayChanguCurrency.MWK,
-            CancellationToken cancellationToken = default);
+    /// <summary>Gets the PayChangu reference data operations.</summary>
+    IPayChanguReferenceDataClient ReferenceData { get; }
 }
-
 
 /// <summary>
 /// Provides the HTTP implementation of <see cref="IPayChanguClient"/>.
@@ -425,7 +84,32 @@ internal sealed class PayChanguClient : IPayChanguClient
     {
         _httpClient = httpClient ??
             throw new ArgumentNullException(nameof(httpClient));
+
+        Checkout = new PayChanguCheckoutClient(this);
+        DirectCharges = new PayChanguDirectChargesClient(this);
+        Payouts = new PayChanguPayoutsClient(this);
+        Transactions = new PayChanguTransactionsClient(this);
+        Wallet = new PayChanguWalletClient(this);
+        ReferenceData = new PayChanguReferenceDataClient(this);
     }
+
+    /// <inheritdoc />
+    public IPayChanguCheckoutClient Checkout { get; }
+
+    /// <inheritdoc />
+    public IPayChanguDirectChargesClient DirectCharges { get; }
+
+    /// <inheritdoc />
+    public IPayChanguPayoutsClient Payouts { get; }
+
+    /// <inheritdoc />
+    public IPayChanguTransactionsClient Transactions { get; }
+
+    /// <inheritdoc />
+    public IPayChanguWalletClient Wallet { get; }
+
+    /// <inheritdoc />
+    public IPayChanguReferenceDataClient ReferenceData { get; }
 
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<InitiateCheckoutResponse>>

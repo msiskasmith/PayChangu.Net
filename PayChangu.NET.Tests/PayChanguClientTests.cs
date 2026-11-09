@@ -108,7 +108,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiateCheckoutAsync(
+        var result = await client.Checkout.InitiateAsync(
             CreatePaymentRequest());
 
         // Assert
@@ -157,7 +157,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiateCheckoutAsync(CreatePaymentRequest());
+        var result = await client.Checkout.InitiateAsync(CreatePaymentRequest());
 
         // Assert
         Assert.NotNull(result);
@@ -184,7 +184,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiateCheckoutAsync(CreatePaymentRequest());
+        var result = await client.Checkout.InitiateAsync(CreatePaymentRequest());
 
         // Assert
         Assert.NotNull(result);
@@ -253,7 +253,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             transactionReference,
             PayChanguPaymentFlow.Checkout,
             PayChanguPaymentMethod.Card);
@@ -317,7 +317,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             "TXN-12345",
             PayChanguPaymentFlow.Checkout,
             PayChanguPaymentMethod.Card);
@@ -347,7 +347,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             "TXN-12345",
             PayChanguPaymentFlow.Checkout,
             PayChanguPaymentMethod.Card);
@@ -394,7 +394,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.InitiateCheckoutAsync(CreatePaymentRequest());
+        await client.Checkout.InitiateAsync(CreatePaymentRequest());
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
@@ -441,7 +441,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => client.VerifyPaymentAsync(
+            () => client.Transactions.VerifyAsync(
                 transactionIdentifier!,
                 PayChanguPaymentFlow.Checkout,
                 PayChanguPaymentMethod.Card));
@@ -457,7 +457,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => client.VerifyPaymentAsync(
+            () => client.Transactions.VerifyAsync(
                 "TXN-12345",
                 (PayChanguPaymentFlow)999,
                 PayChanguPaymentMethod.Card));
@@ -473,7 +473,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => client.VerifyPaymentAsync(
+            () => client.Transactions.VerifyAsync(
                 "TXN-12345",
                 PayChanguPaymentFlow.Checkout,
                 (PayChanguPaymentMethod)999));
@@ -500,7 +500,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var verificationTask = client.VerifyPaymentAsync(
+        var verificationTask = client.Transactions.VerifyAsync(
             "TXN-12345",
             PayChanguPaymentFlow.Checkout,
             PayChanguPaymentMethod.Card,
@@ -575,7 +575,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             chargeId,
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.MobileMoney);
@@ -682,7 +682,7 @@ public sealed class PayChanguClientTests
 
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        var result = await client.GetMobileMoneyOperatorsAsync();
+        var result = await client.ReferenceData.MobileMoneyOperators.GetAllAsync();
 
         Assert.True(result.Success);
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
@@ -747,7 +747,7 @@ public sealed class PayChanguClientTests
 
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        await client.GetMobileMoneyOperatorsAsync();
+        await client.ReferenceData.MobileMoneyOperators.GetAllAsync();
 
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
         Assert.Equal(
@@ -778,7 +778,7 @@ public sealed class PayChanguClientTests
 
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        var result = await client.GetMobileMoneyOperatorsAsync();
+        var result = await client.ReferenceData.MobileMoneyOperators.GetAllAsync();
 
         Assert.False(result.Success);
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
@@ -805,7 +805,7 @@ public sealed class PayChanguClientTests
 
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        var result = await client.GetMobileMoneyOperatorsAsync();
+        var result = await client.ReferenceData.MobileMoneyOperators.GetAllAsync();
 
         Assert.False(result.Success);
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
@@ -868,7 +868,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+        var result = await client.DirectCharges.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.True(result.Success);
@@ -920,7 +920,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+        var result = await client.DirectCharges.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.False(result.Success);
@@ -960,7 +960,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyDirectChargeAsync(request);
+        var result = await client.DirectCharges.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.False(result.Success);
@@ -1048,7 +1048,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetSingleMobileMoneyChargeDetailsAsync(chargeId);
+        var result = await client.DirectCharges.MobileMoney.GetDetailsAsync(chargeId);
 
         // Assert
         Assert.True(result.Success);
@@ -1156,7 +1156,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSingleMobileMoneyChargeDetailsAsync(chargeId);
+        await client.DirectCharges.MobileMoney.GetDetailsAsync(chargeId);
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -1194,7 +1194,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetSingleMobileMoneyChargeDetailsAsync("74536");
+        var result = await client.DirectCharges.MobileMoney.GetDetailsAsync("74536");
 
         // Assert
         Assert.False(result.Success);
@@ -1225,7 +1225,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetSingleMobileMoneyChargeDetailsAsync("74536");
+        var result = await client.DirectCharges.MobileMoney.GetDetailsAsync("74536");
 
         // Assert
         Assert.False(result.Success);
@@ -1253,7 +1253,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetSingleMobileMoneyChargeDetailsAsync(chargeId!));
+            () => client.DirectCharges.MobileMoney.GetDetailsAsync(chargeId!));
 
         Assert.Null(handler.RequestUri);
     }
@@ -1293,7 +1293,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.VerifyPaymentAsync(
+        var response = await client.Transactions.VerifyAsync(
             "charge-001",
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.MobileMoney);
@@ -1334,7 +1334,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             "test-charge-id",
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.MobileMoney);
@@ -1406,7 +1406,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             chargeId,
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.BankTransfer);
@@ -1538,7 +1538,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateBankTransferDirectChargeAsync(request);
+        var result = await client.DirectCharges.BankTransfer.InitiateAsync(request);
 
         // Assert
         Assert.True(result.Success);
@@ -1607,7 +1607,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateBankTransferDirectChargeAsync(request);
+        var result = await client.DirectCharges.BankTransfer.InitiateAsync(request);
 
         // Assert
         Assert.False(result.Success);
@@ -1641,7 +1641,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateBankTransferDirectChargeAsync(request);
+        var result = await client.DirectCharges.BankTransfer.InitiateAsync(request);
 
         // Assert
         Assert.False(result.Success);
@@ -1682,7 +1682,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             "test-charge-id",
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.BankTransfer);
@@ -1771,7 +1771,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSingleBankTransferDirectChargeDetailsAsync(
+        var response = await client.DirectCharges.BankTransfer.GetDetailsAsync(
             "PTC12383");
 
         // Assert
@@ -1853,7 +1853,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSingleBankTransferDirectChargeDetailsAsync("PTC12383");
+        await client.DirectCharges.BankTransfer.GetDetailsAsync("PTC12383");
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -1886,7 +1886,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSingleBankTransferDirectChargeDetailsAsync(
+        var response = await client.DirectCharges.BankTransfer.GetDetailsAsync(
             "PTC12383");
 
         // Assert
@@ -1913,7 +1913,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSingleBankTransferDirectChargeDetailsAsync(
+        var response = await client.DirectCharges.BankTransfer.GetDetailsAsync(
             "PTC12383");
 
         // Assert
@@ -1940,7 +1940,7 @@ public sealed class PayChanguClientTests
 
         // Act
         var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetSingleBankTransferDirectChargeDetailsAsync(chargeId!));
+            () => client.DirectCharges.BankTransfer.GetDetailsAsync(chargeId!));
 
         // Assert
         Assert.Equal(
@@ -1975,7 +1975,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateMobileMoneyDirectChargeAsync(request);
+        await client.DirectCharges.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
@@ -2011,7 +2011,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateMobileMoneyDirectChargeAsync(request);
+        await client.DirectCharges.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.NotNull(handler.RequestContent);
@@ -2053,7 +2053,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateMobileMoneyDirectChargeAsync(request);
+        await client.DirectCharges.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -2070,7 +2070,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => client.InitiateMobileMoneyDirectChargeAsync(null!));
+            () => client.DirectCharges.MobileMoney.InitiateAsync(null!));
     }
 
     [Fact]
@@ -2096,7 +2096,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateBankTransferDirectChargeAsync(request);
+        await client.DirectCharges.BankTransfer.InitiateAsync(request);
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
@@ -2131,7 +2131,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateBankTransferDirectChargeAsync(request);
+        await client.DirectCharges.BankTransfer.InitiateAsync(request);
 
         // Assert
         Assert.NotNull(handler.RequestContent);
@@ -2171,7 +2171,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateBankTransferDirectChargeAsync(request);
+        await client.DirectCharges.BankTransfer.InitiateAsync(request);
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -2188,7 +2188,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => client.InitiateBankTransferDirectChargeAsync(null!));
+            () => client.DirectCharges.BankTransfer.InitiateAsync(null!));
     }
 
     [Fact]
@@ -2217,7 +2217,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiateCardChargeAsync(
+        var result = await client.DirectCharges.Card.InitiateAsync(
             CreateCardChargeRequest());
 
         // Assert
@@ -2264,7 +2264,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.InitiateCardChargeAsync(CreateCardChargeRequest());
+        await client.DirectCharges.Card.InitiateAsync(CreateCardChargeRequest());
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
@@ -2296,7 +2296,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.InitiateCardChargeAsync(CreateCardChargeRequest());
+        await client.DirectCharges.Card.InitiateAsync(CreateCardChargeRequest());
 
         // Assert
         Assert.NotNull(handler.RequestContent);
@@ -2350,7 +2350,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.InitiateCardChargeAsync(CreateCardChargeRequest());
+        await client.DirectCharges.Card.InitiateAsync(CreateCardChargeRequest());
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -2381,7 +2381,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiateCardChargeAsync(
+        var result = await client.DirectCharges.Card.InitiateAsync(
             CreateCardChargeRequest());
 
         // Assert
@@ -2404,7 +2404,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => client.InitiateCardChargeAsync(null!));
+            () => client.DirectCharges.Card.InitiateAsync(null!));
 
         Assert.Null(handler.RequestUri);
     }
@@ -2420,7 +2420,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.RefundCardChargeAsync("card-charge-001");
+        var response = await client.DirectCharges.Card.RefundAsync("card-charge-001");
 
         // Assert
         Assert.True(response.Success);
@@ -2439,7 +2439,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.RefundCardChargeAsync("card-charge-001");
+        await client.DirectCharges.Card.RefundAsync("card-charge-001");
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
@@ -2459,7 +2459,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.RefundCardChargeAsync("card-charge-001");
+        await client.DirectCharges.Card.RefundAsync("card-charge-001");
 
         // Assert
         Assert.Null(handler.RequestContent);
@@ -2476,7 +2476,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.RefundCardChargeAsync("card-charge-001");
+        await client.DirectCharges.Card.RefundAsync("card-charge-001");
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -2494,7 +2494,7 @@ public sealed class PayChanguClientTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.RefundCardChargeAsync("card-charge-001");
+        var response = await client.DirectCharges.Card.RefundAsync("card-charge-001");
 
         // Assert
         Assert.False(response.Success);
@@ -2517,7 +2517,7 @@ public sealed class PayChanguClientTests
         const string chargeId = "card/charge 001";
 
         // Act
-        await client.RefundCardChargeAsync(chargeId);
+        await client.DirectCharges.Card.RefundAsync(chargeId);
 
         // Assert
         Assert.Equal(
@@ -2542,7 +2542,7 @@ public sealed class PayChanguClientTests
 
         // Act
         var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.RefundCardChargeAsync(chargeId!));
+            () => client.DirectCharges.Card.RefundAsync(chargeId!));
 
         // Assert
         Assert.Equal(
@@ -2610,7 +2610,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             chargeId,
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.Card);
@@ -2669,7 +2669,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.VerifyPaymentAsync(
+        var result = await client.Transactions.VerifyAsync(
             "charge-001",
             PayChanguPaymentFlow.DirectCharge,
             PayChanguPaymentMethod.Card);
@@ -2753,7 +2753,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyPayoutAsync(request);
+        var result = await client.Payouts.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.True(result.Success);
@@ -2840,7 +2840,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateMobileMoneyPayoutAsync(request);
+        await client.Payouts.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
@@ -2878,7 +2878,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateMobileMoneyPayoutAsync(request);
+        await client.Payouts.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.NotNull(handler.RequestContent);
@@ -2928,7 +2928,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        await client.InitiateMobileMoneyPayoutAsync(request);
+        await client.Payouts.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -2968,7 +2968,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyPayoutAsync(request);
+        var result = await client.Payouts.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.False(result.Success);
@@ -3006,7 +3006,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateMobileMoneyPayoutAsync(request);
+        var result = await client.Payouts.MobileMoney.InitiateAsync(request);
 
         // Assert
         Assert.False(result.Success);
@@ -3030,7 +3030,7 @@ public sealed class PayChanguClientTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => client.InitiateMobileMoneyPayoutAsync(null!));
+            () => client.Payouts.MobileMoney.InitiateAsync(null!));
 
         Assert.Null(handler.RequestUri);
     }
@@ -3099,7 +3099,7 @@ public sealed class PayChanguClientTests
         };
 
         // Act
-        var result = await client.InitiateBankPayoutAsync(request);
+        var result = await client.Payouts.Bank.InitiateAsync(request);
 
         // Assert
         Assert.True(result.Success);
@@ -3189,7 +3189,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetBalanceAsync();
+        var result = await client.Wallet.GetBalanceAsync();
 
         // Assert
         Assert.True(result.Success);
@@ -3235,7 +3235,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetBalanceAsync(PayChanguCurrency.USD);
+        var result = await client.Wallet.GetBalanceAsync(PayChanguCurrency.USD);
 
         // Assert
         Assert.Equal(
@@ -3263,7 +3263,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetBalanceAsync();
+        var result = await client.Wallet.GetBalanceAsync();
 
         // Assert
         Assert.False(result.Success);
@@ -3291,7 +3291,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetBalanceAsync();
+        var result = await client.Wallet.GetBalanceAsync();
 
         // Assert
         Assert.False(result.Success);
@@ -3317,7 +3317,7 @@ public sealed class PayChanguClientTests
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        await client.GetBalanceAsync();
+        await client.Wallet.GetBalanceAsync();
 
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
         Assert.Equal(
@@ -3338,7 +3338,7 @@ public sealed class PayChanguClientTests
         using var serviceProvider = CreateServiceProvider(handler);
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
-        await client.GetBalanceAsync();
+        await client.Wallet.GetBalanceAsync();
 
         Assert.Equal("Bearer", handler.AuthorizationScheme);
         Assert.Equal(SecretKey, handler.AuthorizationParameter);
@@ -3408,7 +3408,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSupportedBanksAsync(PayChanguCurrency.MWK);
+        var response = await client.ReferenceData.Banks.GetSupportedAsync(PayChanguCurrency.MWK);
 
         // Assert
         Assert.True(response.Success);
@@ -3458,7 +3458,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSupportedBanksAsync(PayChanguCurrency.MWK);
+        await client.ReferenceData.Banks.GetSupportedAsync(PayChanguCurrency.MWK);
 
         // Assert
         Assert.Equal(
@@ -3485,7 +3485,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var response = await client.GetSupportedBanksAsync(PayChanguCurrency.MWK);
+        var response = await client.ReferenceData.Banks.GetSupportedAsync(PayChanguCurrency.MWK);
 
         // Assert
         Assert.False(response.Success);
@@ -3551,7 +3551,7 @@ public sealed class PayChanguClientTests
         const string chargeId = "TRX683932Ygis898jjnyghvtguuu";
 
         // Act
-        var result = await client.GetSingleBankPayoutDetailsAsync(chargeId);
+        var result = await client.Payouts.Bank.GetDetailsAsync(chargeId);
 
         // Assert
         Assert.True(result.Success);
@@ -3630,7 +3630,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSingleBankPayoutDetailsAsync(chargeId);
+        await client.Payouts.Bank.GetDetailsAsync(chargeId);
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -3658,7 +3658,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSingleBankPayoutDetailsAsync(chargeId);
+        await client.Payouts.Bank.GetDetailsAsync(chargeId);
 
         // Assert
         Assert.Equal(
@@ -3683,7 +3683,7 @@ public sealed class PayChanguClientTests
 
         // Act
         var exception = await Assert.ThrowsAsync<PayChanguException>(
-            () => client.GetSingleBankPayoutDetailsAsync(chargeId!));
+            () => client.Payouts.Bank.GetDetailsAsync(chargeId!));
 
         // Assert
         Assert.NotNull(exception);
@@ -3709,7 +3709,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetSingleBankPayoutDetailsAsync("TRX123456");
+        var result = await client.Payouts.Bank.GetDetailsAsync("TRX123456");
 
         // Assert
         Assert.False(result.Success);
@@ -3738,7 +3738,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetSingleBankPayoutDetailsAsync("TRX123456");
+        var result = await client.Payouts.Bank.GetDetailsAsync("TRX123456");
 
         // Assert
         Assert.False(result.Success);
@@ -3765,7 +3765,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetSingleBankPayoutDetailsAsync("TRX123456");
+        await client.Payouts.Bank.GetDetailsAsync("TRX123456");
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -3831,7 +3831,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetAllBankPayoutDetailsAsync();
+        var result = await client.Payouts.Bank.GetAllAsync();
 
         // Assert
         Assert.NotNull(result);
@@ -3932,7 +3932,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetAllBankPayoutDetailsAsync();
+        await client.Payouts.Bank.GetAllAsync();
 
         // Assert
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
@@ -3970,7 +3970,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.GetAllBankPayoutDetailsAsync();
+        await client.Payouts.Bank.GetAllAsync();
 
         // Assert
         Assert.Equal("Bearer", handler.AuthorizationScheme);
@@ -3994,7 +3994,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetAllBankPayoutDetailsAsync();
+        var result = await client.Payouts.Bank.GetAllAsync();
 
         // Assert
         Assert.False(result.Success);
@@ -4021,7 +4021,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetAllBankPayoutDetailsAsync();
+        var result = await client.Payouts.Bank.GetAllAsync();
 
         // Assert
         Assert.False(result.Success);
@@ -4060,7 +4060,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.GetAllBankPayoutDetailsAsync();
+        var result = await client.Payouts.Bank.GetAllAsync();
 
         // Assert
         Assert.True(result.Success);
