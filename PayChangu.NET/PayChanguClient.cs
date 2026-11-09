@@ -1,12 +1,11 @@
-﻿using PayChangu.NET.Constants;
+﻿using Microsoft.Extensions.Logging;
+using PayChangu.NET.Constants;
 using PayChangu.NET.Exceptions;
 using PayChangu.NET.Extensions;
 using PayChangu.NET.Models;
 using PayChangu.NET.Models.Base;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -660,7 +659,6 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <summary>
     /// Sends an HTTP request to PayChangu and deserializes the response.
     /// </summary>
-    /// <typeparam name="TResponse">The expected response model type.</typeparam>
     /// <param name="httpRequest">The HTTP request to send.</param>
     /// <param name="operation">A description of the API operation.</param>
     /// <param name="cancellationToken">A token used to cancel the asynchronous operation.</param>
@@ -857,58 +855,6 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <summary>
-    /// Sends a GET request and evaluates its success using the HTTP status code
-    /// without attempting to deserialize the response body.
-    /// </summary>
-    /// <typeparam name="TResponse">The expected response data type.</typeparam>
-    /// <param name="endpoint">The API endpoint to send the request to.</param>
-    /// <param name="operation">A description of the operation being performed.</param>
-    /// <param name="cancellationToken">A token used to cancel the operation.</param>
-    /// <returns>
-    /// A response indicating whether the request was successful and the HTTP
-    /// status code returned by PayChangu.
-    /// </returns>
-    private async Task<PayChanguApiResponse<TResponse>> GetStatusAsync<TResponse>(
-        string endpoint,
-        string operation,
-        CancellationToken cancellationToken)
-    {
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            endpoint);
-
-        using var response = await SendHttpRequestAsync(
-            request,
-            operation,
-            cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.OK)
-        {
-            _logger.LogDebug(
-                "PayChangu API operation {Operation} completed successfully with HTTP status code {StatusCode}.",
-                operation,
-                (int)response.StatusCode);
-
-            return CreateSuccess<TResponse>(
-                response.StatusCode,
-                null);
-        }
-
-        _logger.LogWarning(
-            "PayChangu API operation {Operation} returned HTTP status code {StatusCode}.",
-            operation,
-            (int)response.StatusCode);
-
-        var errorMessage =
-            $"{operation} failed with HTTP status code {(int)response.StatusCode}.";
-
-        return CreateFailure<TResponse>(
-            response.StatusCode,
-            errorMessage,
-            null);
-    }
-
-    /// <summary>
     /// Sends a POST request and evaluates its success using the HTTP status code
     /// without attempting to deserialize the response body.
     /// </summary>
@@ -979,25 +925,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             Success = true,
             StatusCode = statusCode,
             Result = data,
-            RawJsonResponse = rawJsonResponse
-        };
-    }
-
-    /// <summary>
-    /// Creates a successful API response wrapper.
-    /// </summary>
-    /// <typeparam name="T">The type of data returned by the API.</typeparam>
-    /// <param name="statusCode">The HTTP status code returned by PayChangu.</param>
-    /// <param name="rawJsonResponse">The original JSON response body.</param>
-    /// <returns>A successful API response wrapper.</returns>
-    private static PayChanguApiResponse<T> CreateSuccess<T>(
-        HttpStatusCode? statusCode,
-        string? rawJsonResponse)
-    {
-        return new PayChanguApiResponse<T>
-        {
-            Success = true,
-            StatusCode = statusCode,
             RawJsonResponse = rawJsonResponse
         };
     }
@@ -1230,28 +1157,5 @@ internal sealed class PayChanguClient : IPayChanguClient
             CreatedAt = transaction.CreatedAt,
             CompletedAt = transaction.CompletedAt
         };
-    }
-
-    /// <summary>
-    /// Parses a transaction charge amount using invariant culture.
-    /// </summary>
-    /// <param name="amount">The charge amount returned by PayChangu.</param>
-    /// <returns>The parsed charge amount.</returns>
-    /// <exception cref="PayChanguException">
-    /// Thrown when the charge amount cannot be parsed as a decimal value.
-    /// </exception>
-    private static decimal ParseChargeAmount(string amount)
-    {
-        if (!decimal.TryParse(
-            amount,
-            NumberStyles.Number,
-            CultureInfo.InvariantCulture,
-            out var result))
-        {
-            throw new PayChanguException(
-                $"PayChangu returned an invalid transaction charge amount: {amount}");
-        }
-
-        return result;
     }
 }
