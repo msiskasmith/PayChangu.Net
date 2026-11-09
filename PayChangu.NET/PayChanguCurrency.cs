@@ -15,5 +15,10 @@ public enum PayChanguCurrency
     /// <summary>
     /// United States Dollar.
     /// </summary>
-    USD
+    USD,
+
+    /// <summary>
+    /// Zambian Kwacha.
+    /// </summary>
+    ZMW
 }
