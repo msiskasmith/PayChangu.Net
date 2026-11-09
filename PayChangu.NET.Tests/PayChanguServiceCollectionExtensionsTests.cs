@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PayChangu.NET.Extensions;
 using PayChangu.NET.Tests.Fakes;
 using System.Net;
@@ -149,5 +150,89 @@ public sealed class PayChanguServiceCollectionExtensionsTests
 
         Assert.Throws<ArgumentNullException>(
             () => services.AddPayChangu(null!));
+    }
+
+    [Fact]
+    public async Task AddPayChangu_ShouldLogAndRethrowHttpTransportExceptions()
+    {
+        // Arrange
+        var expectedException = new HttpRequestException("Connection failed.");
+        var handler = new FakeHttpMessageHandler(
+            (_, _) => Task.FromException<HttpResponseMessage>(expectedException));
+
+        using var loggerProvider = new TestLoggerProvider();
+
+        var services = new ServiceCollection();
+
+        services.AddLogging(builder =>
+        {
+            builder.AddProvider(loggerProvider);
+            builder.SetMinimumLevel(LogLevel.Debug);
+        });
+
+        services.AddPayChangu(
+            options => options.SecretKey = SecretKey,
+            httpClientBuilder =>
+                httpClientBuilder.ConfigurePrimaryHttpMessageHandler(() => handler));
+
+        using var provider = services.BuildServiceProvider();
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.ReferenceData.MobileMoneyOperators.GetAllAsync());
+
+        // Assert
+        Assert.Same(expectedException, exception);
+        Assert.Contains(
+            loggerProvider.Entries,
+            entry =>
+                entry.LogLevel == LogLevel.Error &&
+                entry.Exception == expectedException &&
+                entry.Message.Contains("HTTP transport failure"));
+    }
+
+    [Fact]
+    public async Task AddPayChangu_ShouldLogApiFailuresAndReturnFailedResponse()
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    """{"message":"Invalid payment request"}""")
+            });
+
+        using var loggerProvider = new TestLoggerProvider();
+
+        var services = new ServiceCollection();
+
+        services.AddLogging(builder =>
+        {
+            builder.AddProvider(loggerProvider);
+            builder.SetMinimumLevel(LogLevel.Debug);
+        });
+
+        services.AddPayChangu(
+            options => options.SecretKey = SecretKey,
+            httpClientBuilder =>
+                httpClientBuilder.ConfigurePrimaryHttpMessageHandler(() => handler));
+
+        using var provider = services.BuildServiceProvider();
+        var client = provider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var response = await client.ReferenceData.MobileMoneyOperators.GetAllAsync();
+
+        // Assert
+        Assert.False(response.Success);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Invalid payment request", response.ErrorMessage);
+
+        Assert.Contains(
+            loggerProvider.Entries,
+            entry =>
+                entry.LogLevel == LogLevel.Warning &&
+                entry.Message.Contains("returned HTTP status code"));
     }
 }

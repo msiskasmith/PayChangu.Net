@@ -23,6 +23,7 @@ PayChangu.NET provides a strongly typed, asynchronous interface for interacting 
 - Bearer token authentication.
 - Asynchronous operations with cancellation token support.
 - Standardized API response handling.
+- Optional diagnostic logging through `Microsoft.Extensions.Logging`.
 - Webhook signature validation and event parsing.
 
 ## Supported Currencies
@@ -95,6 +96,29 @@ builder.Services.AddPayChangu(options =>
     options.BaseUrl = "https://api.paychangu.com/";
 });
 ```
+
+### Logging
+
+PayChangu.NET uses the standard .NET logging abstractions to provide diagnostic information about API operations. Logging is optional; the SDK does not require you to configure a logging provider.
+
+Configure logging through your application's dependency injection container. For example, to write SDK logs to the console, add the `Microsoft.Extensions.Logging.Console` package and configure it as follows:
+
+```csharp
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.SetMinimumLevel(LogLevel.Debug);
+});
+
+builder.Services.AddPayChangu(options =>
+{
+    options.SecretKey = builder.Configuration["PayChangu:SecretKey"]!;
+});
+```
+
+The SDK records request activity at `Debug`, unsuccessful PayChangu responses and response parsing issues at `Warning`, and HTTP transport failures at `Error`. Transport exceptions are logged and rethrown; API-level failures continue to be returned through the `PayChanguApiResponse` types.
+
+The SDK does not log API keys, authorization headers, request bodies, or raw response bodies. Configure logging levels and providers according to your application's requirements.
 
 ### HTTP client configuration
 

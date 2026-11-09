@@ -3,6 +3,7 @@ using PayChangu.NET.Exceptions;
 using PayChangu.NET.Extensions;
 using PayChangu.NET.Models;
 using PayChangu.NET.Models.Base;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -66,6 +67,7 @@ public interface IPayChanguClient
 internal sealed class PayChanguClient : IPayChanguClient
 {
     private readonly HttpClient _httpClient;
+    private readonly ILogger<PayChanguClient> _logger;
 
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -77,13 +79,20 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// Initializes a new instance of the <see cref="PayChanguClient"/> class.
     /// </summary>
     /// <param name="httpClient">The HTTP client used for API communication.</param>
+    /// <param name="logger">The logger used to record SDK diagnostics.</param>
     /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
+    /// Thrown when <paramref name="httpClient"/> or <paramref name="logger"/>
+    /// is <see langword="null"/>.
     /// </exception>
-    public PayChanguClient(HttpClient httpClient)
+    public PayChanguClient(
+        HttpClient httpClient,
+        ILogger<PayChanguClient> logger)
     {
         _httpClient = httpClient ??
             throw new ArgumentNullException(nameof(httpClient));
+
+        _logger = logger ??
+            throw new ArgumentNullException(nameof(logger));
 
         Checkout = new PayChanguCheckoutClient(this);
         DirectCharges = new PayChanguDirectChargesClient(this);
@@ -662,17 +671,44 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <remarks>
     /// HTTP errors, empty response bodies, and JSON deserialization failures
     /// are represented by a failed <see cref="PayChanguApiResponse{T}"/>.
-    /// HTTP transport exceptions and cancellation exceptions are not caught
-    /// and will propagate to the caller.
+    /// HTTP transport exceptions are logged and rethrown. Cancellation
+    /// exceptions are not caught and propagate to the caller.
     /// </remarks>
+    private async Task<HttpResponseMessage> SendHttpRequestAsync(
+        HttpRequestMessage httpRequest,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogDebug(
+            "Starting PayChangu API operation: {Operation}.",
+            operation);
+
+        try
+        {
+            return await _httpClient.SendAsync(
+                httpRequest,
+                cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(
+                ex,
+                "HTTP transport failure during PayChangu operation: {Operation}.",
+                operation);
+
+            throw;
+        }
+    }
+
     private async Task<PayChanguApiResponse<TResponse>> SendAsync<TResponse>(
         HttpRequestMessage httpRequest,
         string operation,
         CancellationToken cancellationToken)
         where TResponse : class
     {
-        using var response = await _httpClient.SendAsync(
+        using var response = await SendHttpRequestAsync(
             httpRequest,
+            operation,
             cancellationToken);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -680,6 +716,11 @@ internal sealed class PayChanguClient : IPayChanguClient
         // Return unsuccessful HTTP responses as API response objects.
         if (!response.IsSuccessStatusCode)
         {
+            _logger.LogWarning(
+                "PayChangu API operation {Operation} returned HTTP status code {StatusCode}.",
+                operation,
+                (int)response.StatusCode);
+
             return CreateFailure<TResponse>(
                 response.StatusCode,
                 ExtractErrorMessage(
@@ -692,6 +733,10 @@ internal sealed class PayChanguClient : IPayChanguClient
         // A successful HTTP status does not guarantee a valid response body.
         if (string.IsNullOrWhiteSpace(content))
         {
+            _logger.LogWarning(
+                "PayChangu returned an empty response during operation {Operation}.",
+                operation);
+
             return CreateFailure<TResponse>(
                 response.StatusCode,
                 $"PayChangu returned an empty response during {operation}.",
@@ -706,11 +751,20 @@ internal sealed class PayChanguClient : IPayChanguClient
 
             if (result == null)
             {
+                _logger.LogWarning(
+                    "PayChangu returned an empty response during operation {Operation}.",
+                    operation);
+
                 return CreateFailure<TResponse>(
                     response.StatusCode,
                     $"PayChangu returned an empty response during {operation}.",
                     content);
             }
+
+            _logger.LogDebug(
+                "PayChangu API operation {Operation} completed successfully with HTTP status code {StatusCode}.",
+                operation,
+                (int)response.StatusCode);
 
             return CreateSuccess(
                 response.StatusCode,
@@ -719,6 +773,11 @@ internal sealed class PayChanguClient : IPayChanguClient
         }
         catch (JsonException ex)
         {
+            _logger.LogWarning(
+                ex,
+                "Unable to deserialize the PayChangu response during operation {Operation}.",
+                operation);
+
             return CreateFailure<TResponse>(
                 response.StatusCode,
                 $"Unable to deserialize the PayChangu response during {operation}: {ex.Message}",
@@ -818,16 +877,27 @@ internal sealed class PayChanguClient : IPayChanguClient
             HttpMethod.Get,
             endpoint);
 
-        using var response = await _httpClient.SendAsync(
+        using var response = await SendHttpRequestAsync(
             request,
+            operation,
             cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
+            _logger.LogDebug(
+                "PayChangu API operation {Operation} completed successfully with HTTP status code {StatusCode}.",
+                operation,
+                (int)response.StatusCode);
+
             return CreateSuccess<TResponse>(
                 response.StatusCode,
                 null);
         }
+
+        _logger.LogWarning(
+            "PayChangu API operation {Operation} returned HTTP status code {StatusCode}.",
+            operation,
+            (int)response.StatusCode);
 
         var errorMessage =
             $"{operation} failed with HTTP status code {(int)response.StatusCode}.";
@@ -858,18 +928,29 @@ internal sealed class PayChanguClient : IPayChanguClient
             HttpMethod.Post,
             endpoint);
 
-        using var response = await _httpClient.SendAsync(
+        using var response = await SendHttpRequestAsync(
             request,
+            operation,
             cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
+            _logger.LogDebug(
+                "PayChangu API operation {Operation} completed successfully with HTTP status code {StatusCode}.",
+                operation,
+                (int)response.StatusCode);
+
             return new PayChanguApiResponse
             {
                 Success = true,
                 StatusCode = response.StatusCode
             };
         }
+
+        _logger.LogWarning(
+            "PayChangu API operation {Operation} returned HTTP status code {StatusCode}.",
+            operation,
+            (int)response.StatusCode);
 
         return new PayChanguApiResponse
         {
