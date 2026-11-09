@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace PayChangu.NET;
+
 /// <summary>Provides access to PayChangu reference data.</summary>
 public interface IPayChanguReferenceDataClient
 {
