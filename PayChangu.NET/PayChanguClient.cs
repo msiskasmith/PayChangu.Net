@@ -111,7 +111,6 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <inheritdoc />
     public IPayChanguReferenceDataClient ReferenceData { get; }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<InitiateCheckoutResponse>>
         InitiateCheckoutCoreAsync(
             InitiateCheckoutRequest request,
@@ -139,7 +138,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<VerifyPaymentResponse>>
         VerifyPaymentCoreAsync(
             string transactionIdentifier,
@@ -366,7 +364,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             "Only Checkout and Direct Charge payment flows are supported.");
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetMobileMoneyOperatorsResponse>>
         GetMobileMoneyOperatorsCoreAsync(
             CancellationToken cancellationToken = default)
@@ -377,7 +374,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<InitiateMobileMoneyDirectChargeResponse>>
         InitiateMobileMoneyDirectChargeCoreAsync(
             InitiateMobileMoneyDirectChargeRequest request,
@@ -406,7 +402,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetMobileMoneyChargeDetailsResponse>>
         GetSingleMobileMoneyChargeDetailsCoreAsync(
             string chargeId,
@@ -428,7 +423,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<InitiateMobileMoneyPayoutResponse>>
         InitiateMobileMoneyPayoutCoreAsync(
             InitiateMobileMoneyPayoutRequest request,
@@ -456,7 +450,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<InitiateBankTransferDirectChargeResponse>>
         InitiateBankTransferDirectChargeCoreAsync(
             InitiateBankTransferDirectChargeRequest request,
@@ -485,7 +478,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
         GetSingleBankTransferDirectChargeDetailsCoreAsync(
             string chargeId,
@@ -507,7 +499,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<InitiateCardDirectChargeResponse>>
         InitiateCardChargeCoreAsync(
             InitiateCardDirectChargeRequest request,
@@ -535,7 +526,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<InitiateBankPayoutResponse>>
         InitiateBankPayoutCoreAsync(
             InitiateBankPayoutRequest request,
@@ -563,7 +553,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetSingleBankPayoutDetailsResponse>>
         GetSingleBankPayoutDetailsCoreAsync(
             string chargeId,
@@ -585,7 +574,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetAllBankPayoutDetailsResponse>>
         GetAllBankPayoutDetailsCoreAsync(
             CancellationToken cancellationToken = default)
@@ -596,7 +584,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse> RefundCardChargeCoreAsync(
         string chargeId,
         CancellationToken cancellationToken = default)
@@ -617,7 +604,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetBalanceResponse>>
         GetBalanceCoreAsync(
             PayChanguCurrency currency = PayChanguCurrency.MWK,
@@ -633,7 +619,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
     private async Task<PayChanguApiResponse<GetSupportedBanksResponse>>
         GetSupportedBanksCoreAsync(
             PayChanguCurrency currency = PayChanguCurrency.MWK,
@@ -1175,7 +1160,7 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
 
-    internal sealed class PayChanguCheckoutClient : IPayChanguCheckoutClient
+    private sealed class PayChanguCheckoutClient : IPayChanguCheckoutClient
     {
         private readonly PayChanguClient _client;
         public PayChanguCheckoutClient(PayChanguClient client) => _client = client;
@@ -1184,7 +1169,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.InitiateCheckoutCoreAsync(request, cancellationToken);
     }
     
-    internal sealed class PayChanguDirectChargesClient : IPayChanguDirectChargesClient
+    private sealed class PayChanguDirectChargesClient : IPayChanguDirectChargesClient
     {
         public PayChanguDirectChargesClient(PayChanguClient client)
         {
@@ -1198,7 +1183,7 @@ internal sealed class PayChanguClient : IPayChanguClient
         public IPayChanguCardDirectChargeClient Card { get; }
     }
     
-    internal sealed class PayChanguMobileMoneyDirectChargeClient : IPayChanguMobileMoneyDirectChargeClient
+    private sealed class PayChanguMobileMoneyDirectChargeClient : IPayChanguMobileMoneyDirectChargeClient
     {
         private readonly PayChanguClient _client;
         public PayChanguMobileMoneyDirectChargeClient(PayChanguClient client) => _client = client;
@@ -1210,7 +1195,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.GetSingleMobileMoneyChargeDetailsCoreAsync(chargeId, cancellationToken);
     }
     
-    internal sealed class PayChanguBankTransferDirectChargeClient : IPayChanguBankTransferDirectChargeClient
+    private sealed class PayChanguBankTransferDirectChargeClient : IPayChanguBankTransferDirectChargeClient
     {
         private readonly PayChanguClient _client;
         public PayChanguBankTransferDirectChargeClient(PayChanguClient client) => _client = client;
@@ -1222,7 +1207,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.GetSingleBankTransferDirectChargeDetailsCoreAsync(chargeId, cancellationToken);
     }
     
-    internal sealed class PayChanguCardDirectChargeClient : IPayChanguCardDirectChargeClient
+    private sealed class PayChanguCardDirectChargeClient : IPayChanguCardDirectChargeClient
     {
         private readonly PayChanguClient _client;
         public PayChanguCardDirectChargeClient(PayChanguClient client) => _client = client;
@@ -1234,7 +1219,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.RefundCardChargeCoreAsync(chargeId, cancellationToken);
     }
     
-    internal sealed class PayChanguPayoutsClient : IPayChanguPayoutsClient
+    private sealed class PayChanguPayoutsClient : IPayChanguPayoutsClient
     {
         public PayChanguPayoutsClient(PayChanguClient client)
         {
@@ -1245,7 +1230,7 @@ internal sealed class PayChanguClient : IPayChanguClient
         public IPayChanguBankPayoutClient Bank { get; }
     }
     
-    internal sealed class PayChanguMobileMoneyPayoutClient : IPayChanguMobileMoneyPayoutClient
+    private sealed class PayChanguMobileMoneyPayoutClient : IPayChanguMobileMoneyPayoutClient
     {
         private readonly PayChanguClient _client;
         public PayChanguMobileMoneyPayoutClient(PayChanguClient client) => _client = client;
@@ -1254,7 +1239,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.InitiateMobileMoneyPayoutCoreAsync(request, cancellationToken);
     }
     
-    internal sealed class PayChanguBankPayoutClient : IPayChanguBankPayoutClient
+    private sealed class PayChanguBankPayoutClient : IPayChanguBankPayoutClient
     {
         private readonly PayChanguClient _client;
         public PayChanguBankPayoutClient(PayChanguClient client) => _client = client;
@@ -1269,7 +1254,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.GetAllBankPayoutDetailsCoreAsync(cancellationToken);
     }
     
-    internal sealed class PayChanguTransactionsClient : IPayChanguTransactionsClient
+    private sealed class PayChanguTransactionsClient : IPayChanguTransactionsClient
     {
         private readonly PayChanguClient _client;
         public PayChanguTransactionsClient(PayChanguClient client) => _client = client;
@@ -1279,7 +1264,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.VerifyPaymentCoreAsync(transactionIdentifier, paymentFlow, paymentMethod, cancellationToken);
     }
     
-    internal sealed class PayChanguWalletClient : IPayChanguWalletClient
+    private sealed class PayChanguWalletClient : IPayChanguWalletClient
     {
         private readonly PayChanguClient _client;
         public PayChanguWalletClient(PayChanguClient client) => _client = client;
@@ -1289,7 +1274,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.GetBalanceCoreAsync(currency, cancellationToken);
     }
     
-    internal sealed class PayChanguReferenceDataClient : IPayChanguReferenceDataClient
+    private sealed class PayChanguReferenceDataClient : IPayChanguReferenceDataClient
     {
         public PayChanguReferenceDataClient(PayChanguClient client)
         {
@@ -1300,7 +1285,7 @@ internal sealed class PayChanguClient : IPayChanguClient
         public IPayChanguBanksClient Banks { get; }
     }
     
-    internal sealed class PayChanguMobileMoneyOperatorsClient : IPayChanguMobileMoneyOperatorsClient
+    private sealed class PayChanguMobileMoneyOperatorsClient : IPayChanguMobileMoneyOperatorsClient
     {
         private readonly PayChanguClient _client;
         public PayChanguMobileMoneyOperatorsClient(PayChanguClient client) => _client = client;
@@ -1309,7 +1294,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             _client.GetMobileMoneyOperatorsCoreAsync(cancellationToken);
     }
     
-    internal sealed class PayChanguBanksClient : IPayChanguBanksClient
+    private sealed class PayChanguBanksClient : IPayChanguBanksClient
     {
         private readonly PayChanguClient _client;
         public PayChanguBanksClient(PayChanguClient client) => _client = client;
