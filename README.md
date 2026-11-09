@@ -123,6 +123,39 @@ Registration provides the following services:
 
 Keep your secret keys in configuration or a secure secrets provider. Do not hardcode them in source code or expose them in client-side applications.
 
+## Raw JSON Response
+
+Every `PayChanguApiResponse<T>` exposes a `RawJsonResponse` property containing the original JSON response body returned by PayChangu, as a string. This is provided alongside the strongly typed `Result` property; it does not replace or change the deserialized response model.
+
+The typed `Result` is the recommended way to work with the fields modelled by PayChangu.NET. The raw JSON is available when you need to inspect the complete payload, access a field that is not currently represented in the SDK models, or troubleshoot an API response. This can also help when PayChangu adds response fields before a corresponding SDK model update is available.
+
+For example, you can inspect or parse the raw response using `System.Text.Json`:
+
+```csharp
+using System.Text.Json;
+
+var response = await _payChanguClient.VerifyPaymentAsync(
+    transactionIdentifier,
+    PayChanguPaymentFlow.DirectCharge,
+    PayChanguPaymentMethod.MobileMoney,
+    cancellationToken);
+
+if (!string.IsNullOrWhiteSpace(response.RawJsonResponse))
+{
+    using var document = JsonDocument.Parse(response.RawJsonResponse);
+
+    // Inspect the original JSON payload.
+    var root = document.RootElement;
+
+    if (root.TryGetProperty("status", out var statusElement))
+    {
+        var apiStatus = statusElement.GetString();
+    }
+}
+```
+
+`RawJsonResponse` is a raw response body, not a parsed or normalized object. It may be `null` when no response body is available. Use `Result` for normal SDK interactions, and use the raw JSON when you specifically need access to the original payload. Be mindful that API responses may contain customer or transaction information; avoid writing the raw payload to logs that are not appropriately protected.
+
 ## Wallet Balance
 
 PayChangu.NET provides `GetBalanceAsync` to retrieve wallet balance information for a specified currency.
