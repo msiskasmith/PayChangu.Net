@@ -13,9 +13,14 @@ public sealed class WebhookEventStore
     private readonly ConcurrentQueue<WebhookEventLogEntry> _events = new();
 
     /// <summary>
-    /// Adds a successfully parsed webhook event to the in-memory event history.
+    /// Adds a successfully parsed webhook event and its payment verification result
+    /// to the in-memory event history.
     /// </summary>
-    public void Add(PayChanguWebhookEvent webhookEvent)
+    public void Add(
+        PayChanguWebhookEvent webhookEvent,
+        bool? paymentVerified = null,
+        string? verificationStatus = null,
+        string? verificationMessage = null)
     {
         ArgumentNullException.ThrowIfNull(webhookEvent);
 
@@ -28,7 +33,10 @@ public sealed class WebhookEventStore
             webhookEvent.Status,
             webhookEvent.Amount,
             webhookEvent.Currency,
-            webhookEvent.Mode));
+            webhookEvent.Mode,
+            paymentVerified,
+            verificationStatus,
+            verificationMessage));
 
         while (_events.Count > MaximumEventCount)
         {
@@ -69,4 +77,7 @@ public sealed record WebhookEventLogEntry(
     string Status,
     decimal Amount,
     string Currency,
-    string Mode);
+    string Mode,
+    bool? PaymentVerified,
+    string? VerificationStatus,
+    string? VerificationMessage);

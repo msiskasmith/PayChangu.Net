@@ -14,7 +14,8 @@
 
     <RadzenAlert AlertStyle="AlertStyle.Info">
         This sample exposes a server-side webhook endpoint. It validates the raw request body using the configured
-        webhook secret, parses the event, and stores accepted event details for display below.
+        webhook secret, then verifies Checkout and Direct Charge payments against the PayChangu API before storing
+        the event. Payout events are recorded without payment verification.
         The most recent 100 events are kept in memory and remain available when you navigate away and return.
         They are cleared when the application restarts.
     </RadzenAlert>
@@ -99,6 +100,26 @@
                                     <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.PaymentMethod</RadzenText>
                                 </RadzenColumn>
                                 <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Payment verification</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @webhookEvent.VerificationStatus
+                                        @if (webhookEvent.PaymentVerified == true)
+                                        {
+                                            <RadzenBadge Text="Confirmed" BadgeStyle="BadgeStyle.Success" />
+                                        }
+                                        else if (webhookEvent.PaymentVerified == false)
+                                        {
+                                            <RadzenBadge Text="Not confirmed" BadgeStyle="BadgeStyle.Warning" />
+                                        }
+                                    </RadzenText>
+                                    @if (!string.IsNullOrWhiteSpace(webhookEvent.VerificationMessage))
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption">
+                                            @webhookEvent.VerificationMessage
+                                        </RadzenText>
+                                    }
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="6">
                                     <RadzenText TextStyle="TextStyle.Caption">Environment</RadzenText>
                                     <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.Mode</RadzenText>
                                 </RadzenColumn>
@@ -125,8 +146,11 @@
                 <li>Payout — <code>api.payout</code></li>
             </ul>
             <RadzenText TextStyle="TextStyle.Body2">
-                The parsed event exposes its payment flow, payment method, transaction identifier, and status.
-                The sample stores these details without storing the raw payload or signature.
+                Checkout and Direct Charge events are verified using the transaction identifier, payment flow,
+                and payment method from the webhook. The verification response must confirm a successful status
+                and match the webhook amount and currency before the sample marks a payment as confirmed.
+                Payout events are stored separately and are not passed to payment verification. Raw payloads
+                and signatures are not stored.
             </RadzenText>
         </RadzenStack>
     </RadzenCard>
