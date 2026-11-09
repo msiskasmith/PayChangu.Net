@@ -36,7 +36,7 @@ public sealed class BalanceData
     /// Gets or sets the main wallet balance.
     /// </summary>
     [JsonPropertyName("main_balance")]
-    public string MainBalance { get; set; } = null!;
+    public decimal MainBalance { get; set; }
 
     /// <summary>
     /// Gets or sets the collection wallet balance.
