@@ -48,13 +48,13 @@ public sealed class InitiateBankTransferDirectChargeRequest
     /// Gets or sets the customer's first name.
     /// </summary>
     [JsonPropertyName("first_name")]
-    public string? FirstName { get; set; }
+    public string FirstName { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the customer's last name.
     /// </summary>
     [JsonPropertyName("last_name")]
-    public string? LastName { get; set; }
+    public string LastName { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the customer's mobile number.
