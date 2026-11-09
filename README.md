@@ -57,7 +57,7 @@ Currency values returned by PayChangu remain strings in response models, allowin
 
 ## Installation
 
-Once the package is published, install it using the .NET CLI:
+Install it using the .NET CLI:
 
 ```bash
 dotnet add package PayChangu.NET
