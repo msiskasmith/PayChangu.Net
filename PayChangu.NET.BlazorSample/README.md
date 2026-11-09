@@ -41,3 +41,5 @@ Open the local URL shown in the application output.
 - The Payment Flows page demonstrates Standard Checkout, Mobile Money Direct Charge, and Bank Transfer Direct Charge initiation.
 - The Payouts page demonstrates Mobile Money and bank payout initiation using the supported payout operators and banks.
 - The Transactions page demonstrates payment verification. A successful Direct Charge initiation is not proof of payment; verify the transaction or process its webhook before fulfilling an order.
+- The Webhooks page demonstrates the `POST /api/webhooks/paychangu` endpoint, including signature validation and parsing of Checkout, Direct Charge, and payout events. The endpoint logs accepted event details to the application log.
+- To receive live PayChangu webhooks during local development, expose the local application through a secure public tunnel and configure that public URL as the webhook endpoint. The endpoint requires the `PayChangu:WebhookSecret` user secret.

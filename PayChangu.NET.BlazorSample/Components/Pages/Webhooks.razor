@@ -1,0 +1,66 @@
+@page "/webhooks"
+
+<PageTitle>Webhooks | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Webhooks</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Receive PayChangu transaction notifications and validate their signatures before processing them.
+        </RadzenText>
+    </div>
+
+    <RadzenAlert AlertStyle="AlertStyle.Info">
+        This sample exposes a server-side webhook endpoint. It validates the raw request body using the configured
+        webhook secret, parses the event, and writes the event details to the application log.
+    </RadzenAlert>
+
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.H6">Webhook endpoint</RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle2">HTTP method</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">POST</RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Path</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">/api/webhooks/paychangu</RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Signature header</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">Signature</RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Response</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">
+                HTTP 200 when the signature and payload are valid; HTTP 401 for an invalid signature;
+                HTTP 400 for an invalid signed payload.
+            </RadzenText>
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.H6">Events handled</RadzenText>
+            <ul>
+                <li>Standard Checkout — <code>checkout.payment</code></li>
+                <li>Direct Charge — <code>api.charge.payment</code></li>
+                <li>Payout — <code>api.payout</code></li>
+            </ul>
+            <RadzenText TextStyle="TextStyle.Body2">
+                The parsed event exposes its payment flow, payment method, transaction identifier, and status.
+                The sample logs these details without logging the raw payload or signature.
+            </RadzenText>
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.H6">Local testing</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">
+                PayChangu must be able to reach your webhook URL. When running locally, expose the application
+                through a secure public tunnel and use the resulting public URL with the endpoint path above.
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">
+                Configure the webhook secret using .NET User Secrets:
+            </RadzenText>
+            <pre><code>dotnet user-secrets set "PayChangu:WebhookSecret" "&lt;your-webhook-secret&gt;"</code></pre>
+            <RadzenText TextStyle="TextStyle.Body2">
+                The endpoint returns HTTP 503 until a webhook secret is configured.
+            </RadzenText>
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
