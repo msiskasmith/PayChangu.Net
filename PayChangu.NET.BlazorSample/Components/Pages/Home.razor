@@ -13,29 +13,74 @@
     </div>
 
     <RadzenCard>
-        <RadzenStack Gap="0.75rem">
-            <RadzenText TextStyle="TextStyle.H6">Getting started</RadzenText>
-            <RadzenText TextStyle="TextStyle.Body2">
-                This sample application demonstrates how to use PayChangu.NET to integrate PayChangu
-                payment services into a .NET application. It includes practical examples for initiating
-                payments, verifying transactions, retrieving wallet balances, sending payouts, and
-                receiving webhook notifications.
-            </RadzenText>
-            <RadzenText TextStyle="TextStyle.Body2">
-                Choose a page from the navigation to explore an example:
-            </RadzenText>
-            <ul>
-                <li><a href="/payment-flows">Payment Flows</a> — Standard Checkout, Mobile Money Direct Charge, Bank Transfer Direct Charge, and Card Direct Charge with 3-D Secure.</li>
-                <li><a href="/transactions">Transactions</a> — verify Checkout and Direct Charge transactions.</li>
-                <li><a href="/wallet">Wallet Balance</a> — retrieve your PayChangu wallet balances by currency.</li>
-                <li><a href="/payouts">Payouts</a> — initiate Mobile Money and bank payouts.</li>
-                <li><a href="/webhooks">Webhooks</a> — validate webhook signatures and inspect accepted event details.</li>
-            </ul>
-            <RadzenText TextStyle="TextStyle.Body2">
-                The sample can start without an API secret key. When the key has not been configured,
-                a setup notice appears here and on the other pages. Add your key using .NET User Secrets
-                and restart the application to enable the examples.
-            </RadzenText>
+        <RadzenStack Gap="1rem">
+            <div>
+                <RadzenBadge Text="SDK EXAMPLES" BadgeStyle="BadgeStyle.Info" />
+                <RadzenText TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-mt-2">
+                    Getting started
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body1">
+                    Explore how PayChangu.NET brings payments, payouts, and transaction management
+                    into your .NET applications. Choose an area below to get started.
+                </RadzenText>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="payments" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Payment Flows</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Try Standard Checkout, Mobile Money, Bank Transfer, and Card Direct Charge with 3-D Secure.
+                        </RadzenText>
+                        <a href="/payment-flows">Explore payment flows →</a>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="receipt_long" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Transactions</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Verify Checkout and Direct Charge transactions and inspect their returned details.
+                        </RadzenText>
+                        <a href="/transactions">Explore transactions →</a>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="account_balance_wallet" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Wallet Balance</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Retrieve your PayChangu wallet balances and view amounts by currency.
+                        </RadzenText>
+                        <a href="/wallet">View wallet balances →</a>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="send" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Payouts</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Explore Mobile Money and bank payout initiation using supported providers.
+                        </RadzenText>
+                        <a href="/payouts">Explore payouts →</a>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="webhook" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Webhooks</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Validate webhook signatures and inspect accepted payment and payout events.
+                        </RadzenText>
+                        <a href="/webhooks">Explore webhooks →</a>
+                    </RadzenStack>
+                </RadzenCard>
+            </div>
         </RadzenStack>
     </RadzenCard>
 
