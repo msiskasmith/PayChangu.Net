@@ -78,6 +78,8 @@
 </RadzenStack>
 
 @code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+
     private readonly PayChanguCurrency[] currencies =
         Enum.GetValues<PayChanguCurrency>();
 
@@ -99,7 +101,7 @@
 
         try
         {
-            balance = await PayChanguClient.Wallet.GetBalanceAsync(selectedCurrency);
+            balance = await payChanguClient.Wallet.GetBalanceAsync(selectedCurrency);
 
             if (!balance.Success)
             {
