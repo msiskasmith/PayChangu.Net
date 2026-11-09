@@ -139,9 +139,13 @@
                 through a secure public tunnel and use the resulting public URL with the endpoint path above.
             </RadzenText>
             <RadzenText TextStyle="TextStyle.Body2">
-                Configure the webhook secret using .NET User Secrets:
+                Configure the webhook secret using .NET User Secrets. Run this command from the
+                sample project directory (<code>PayChangu.NET.BlazorSample</code>):
             </RadzenText>
             <RadzenAlert AlertStyle="AlertStyle.Dark"
+                         ShowIcon="false"
+                         AllowClose="false"
+                         Variant="Variant.Flat"
                          Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
                 <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet user-secrets set "PayChangu:WebhookSecret" "&lt;your-webhook-secret&gt;"</code></pre>
             </RadzenAlert>
