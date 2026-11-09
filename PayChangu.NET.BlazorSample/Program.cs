@@ -136,43 +136,18 @@ app.MapPost("/api/webhooks/paychangu", async (
 
             var verifiedPayment = verificationResponse.Result;
 
-            var verifiedTransactionIdentifier =
-                webhookEvent.PaymentFlow == PayChanguPaymentFlow.Checkout
-                    ? verifiedPayment.TransactionReference
-                    : verifiedPayment.ChargeId;
-
-            var transactionMatches = string.Equals(
-                verifiedTransactionIdentifier,
+            paymentVerified = verifiedPayment.IsValid(
                 transactionIdentifier,
-                StringComparison.Ordinal);
-
-            var currencyMatches = string.Equals(
-                verifiedPayment.Currency,
                 webhookEvent.Currency,
-                StringComparison.OrdinalIgnoreCase);
-
-            var amountMatches = verifiedPayment.Amount == webhookEvent.Amount;
-
-            paymentVerified =
-                string.Equals(
-                    verifiedPayment.Status,
-                    "success",
-                    StringComparison.OrdinalIgnoreCase) &&
-                transactionMatches &&
-                currencyMatches &&
-                amountMatches;
+                webhookEvent.Amount);
 
             verificationStatus = paymentVerified.Value
                 ? "Verified"
-                : !transactionMatches || !currencyMatches || !amountMatches
-                    ? "Mismatch"
-                    : verifiedPayment.Status;
+                : verifiedPayment.Status;
 
             verificationMessage = paymentVerified.Value
                 ? "The payment was confirmed by the PayChangu verification API."
-                : !transactionMatches || !currencyMatches || !amountMatches
-                    ? "The verification response did not match the transaction identifier, currency, or amount in the webhook."
-                    : verifiedPayment.Message;
+                : verifiedPayment.Message;
 
             if (paymentVerified.Value)
             {
