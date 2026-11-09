@@ -13,9 +13,22 @@ public sealed class InitiateMobileMoneyPayoutResponse : BasePaychanguResponse
     /// Gets or sets the mobile money payout transaction details.
     /// </summary>
     [JsonPropertyName("data")]
-    public MobileMoneyPayoutTransaction Data { get; set; } = null!;
+    public MobileMoneyPayoutResponseData Data { get; set; } = null!;
 }
 
+
+
+/// <summary>
+/// Represents the data returned when a mobile money payout is initiated.
+/// </summary>
+public sealed class MobileMoneyPayoutResponseData
+{
+    /// <summary>
+    /// Gets or sets the mobile money payout transaction details.
+    /// </summary>
+    [JsonPropertyName("transaction")]
+    public MobileMoneyPayoutTransaction Transaction { get; set; } = null!;
+}
 
 /// <summary>
 /// Represents the transaction details returned when initiating a mobile money payout.

@@ -2692,40 +2692,42 @@ public sealed class PayChanguClientTests
         "status": "success",
         "message": "Payout processed successfully.",
         "data": {
-            "amount": 610.2,
-            "charge_id": "6789",
-            "ref_id": "86662145330",
-            "trans_id": null,
-            "first_name": null,
-            "last_name": null,
-            "email": null,
-            "type": "API Payout",
-            "trace_id": null,
-            "status": "success",
-            "mobile": "+265992xxxx20",
-            "attempts": 1,
-            "currency": "MK",
-            "mode": "sandbox",
-            "created_at": "2025-01-06T18:25:37.000000Z",
-            "completed_at": "2025-01-06T18:25:37.000000Z",
-            "event_type": "api.payout",
-            "mobile_money": {
-                "name": "Airtel Money",
-                "ref_id": "20be6c20-adeb-4b5b-a7ba-0769820df4fb",
-                "country": "Malawi"
-            },
-            "transaction_charges": {
+            "transaction": {
+                "amount": 610.2,
+                "charge_id": "6789",
+                "ref_id": "86662145330",
+                "trans_id": null,
+                "first_name": null,
+                "last_name": null,
+                "email": null,
+                "type": "API Payout",
+                "trace_id": null,
+                "status": "success",
+                "mobile": "+265992xxxx20",
+                "attempts": 1,
                 "currency": "MK",
-                "amount": 10.2
-            },
-            "authorization": {
-                "channel": "Mobile Money",
-                "card_number": null,
-                "expiry": null,
-                "brand": null,
-                "provider": "Airtel Money",
-                "mobile_number": null,
-                "completed_at": "2025-01-06T18:25:37.000000Z"
+                "mode": "sandbox",
+                "created_at": "2025-01-06T18:25:37.000000Z",
+                "completed_at": "2025-01-06T18:25:37.000000Z",
+                "event_type": "api.payout",
+                "mobile_money": {
+                    "name": "Airtel Money",
+                    "ref_id": "20be6c20-adeb-4b5b-a7ba-0769820df4fb",
+                    "country": "Malawi"
+                },
+                "transaction_charges": {
+                    "currency": "MK",
+                    "amount": 10.2
+                },
+                "authorization": {
+                    "channel": "Mobile Money",
+                    "card_number": null,
+                    "expiry": null,
+                    "brand": null,
+                    "provider": "Airtel Money",
+                    "mobile_number": null,
+                    "completed_at": "2025-01-06T18:25:37.000000Z"
+                }
             }
         }
     }
@@ -2765,7 +2767,7 @@ public sealed class PayChanguClientTests
         Assert.Equal("success", result.Result.Status);
         Assert.Equal("Payout processed successfully.", result.Result.Message);
 
-        var transaction = result.Result.Data;
+        var transaction = result.Result.Data.Transaction;
 
         Assert.Equal(610.2m, transaction.Amount);
         Assert.Equal("6789", transaction.ChargeId);

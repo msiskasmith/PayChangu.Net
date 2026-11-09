@@ -133,10 +133,20 @@
     {
         <RadzenCard>
             <RadzenStack Gap="0.75rem">
-                <RadzenAlert AlertStyle="AlertStyle.Success">
-                    Payout initiated successfully.
-                    <a href="/wallet">Check your wallet balance</a>.
-                </RadzenAlert>
+                @if (string.Equals(transactionStatus, "success", StringComparison.OrdinalIgnoreCase))
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Success">
+                        Payout initiated successfully.
+                        <a href="/wallet">Check your wallet balance</a>.
+                    </RadzenAlert>
+                }
+                else
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Info">
+                        PayChangu processed the payout request. Check the current status below.
+                        <a href="/wallet">View wallet balance</a>.
+                    </RadzenAlert>
+                }
                 <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
                 <RadzenText TextStyle="TextStyle.Body2">@chargeId</RadzenText>
                 @if (!string.IsNullOrWhiteSpace(providerReference))
@@ -331,7 +341,7 @@
                 LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim()
             });
 
-        if (!response.Success || response.Result?.Data is not { } data)
+        if (!response.Success || response.Result?.Data?.Transaction is not { } data)
         {
             errorMessage = response.ErrorMessage ?? "PayChangu could not initiate the Mobile Money payout.";
             return;
