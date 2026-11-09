@@ -54,7 +54,11 @@
             @if (selectedPaymentFlow == "Standard Checkout")
             {
                 
-                <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                    <RadzenButton Text="Refresh details" Icon="refresh" Size="ButtonSize.Small"
+                                  Click="@GenerateTestDetails" />
+                </RadzenRow>
                 <RadzenRow Gap="1rem">
                     <RadzenColumn Size="12" SizeMD="6">
                         <RadzenTextBox @bind-Value="firstName"
@@ -87,7 +91,11 @@
             else
             {
                 
-                <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                    <RadzenButton Text="Refresh details" Icon="refresh" Size="ButtonSize.Small"
+                                  Click="@GenerateTestDetails" />
+                </RadzenRow>
                 @if (selectedPaymentFlow == "Card Direct Charge")
                 {
                     <RadzenAlert AlertStyle="AlertStyle.Warning">
@@ -143,6 +151,7 @@
                                     TextProperty="Name"
                                     ValueProperty="RefId"
                                     @bind-Value="selectedOperatorRefId"
+                                    Change="@OnOperatorChanged"
                                     Placeholder="Select an operator"
                                     Disabled="@isLoadingOperators"
                                     Style="width: 100%" />
@@ -280,6 +289,8 @@
 @code {
     [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
 
+    private readonly Faker faker = new();
+
     private readonly string[] paymentFlows =
     [
         "Standard Checkout",
@@ -326,6 +337,7 @@
                 cardNumber = testCard.CardNumber;
                 cardExpiry = "12/30";
                 cardCvv = "123";
+                cardholderName = faker.Name.FullName();
             }
         }
     }
@@ -351,6 +363,45 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadMobileMoneyOperatorsAsync();
+        GenerateTestDetails();
+    }
+
+    private void GenerateTestDetails()
+    {
+        firstName = faker.Name.FirstName();
+        lastName = faker.Name.LastName();
+        email = faker.Internet.Email();
+        cardholderName = $"{firstName} {lastName}";
+
+        if (selectedPaymentFlow != "Card Direct Charge")
+        {
+            mobile = GetTestMobileNumber(selectedOperatorRefId, mobileMoneyOperators);
+        }
+    }
+
+    private void OnOperatorChanged(object value)
+    {
+        selectedOperatorRefId = value?.ToString();
+        mobile = GetTestMobileNumber(selectedOperatorRefId, mobileMoneyOperators);
+    }
+
+    private static string GetTestMobileNumber(
+        string? operatorRefId,
+        IEnumerable<SupportedMobileMoneyOperator> operators)
+    {
+        var operatorName = operators.FirstOrDefault(x => x.RefId == operatorRefId)?.Name ?? string.Empty;
+
+        if (operatorName.Contains("TNM", StringComparison.OrdinalIgnoreCase))
+        {
+            return "0888000000";
+        }
+
+        if (operatorName.Contains("Airtel", StringComparison.OrdinalIgnoreCase))
+        {
+            return "0999000000";
+        }
+
+        return new Faker().Random.ReplaceNumbers("09########");
     }
 
     private async Task LoadMobileMoneyOperatorsAsync()
