@@ -25,7 +25,7 @@ public sealed class MobileMoneyPayoutResponseData
 {
     /// <summary>
     /// Gets or sets the mobile money payout transaction details.
-/// </summary>
+    /// </summary>
     [JsonPropertyName("transaction")]
     public MobileMoneyPayoutTransaction Transaction { get; set; } = null!;
 }
