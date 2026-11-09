@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PayChangu.NET" Version="0.2.4" />
-    <PackageReference Include="Radzen.Blazor" Version="12.2.0" />
+	  <ProjectReference Include="..\PayChangu.NET\PayChangu.NET.csproj" />
+	  <PackageReference Include="Radzen.Blazor" Version="12.2.0" />
   </ItemGroup>
 
 </Project>
