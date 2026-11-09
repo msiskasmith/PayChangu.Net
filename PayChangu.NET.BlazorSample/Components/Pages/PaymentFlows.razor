@@ -1,0 +1,430 @@
+@page "/payment-flows"
+
+<PageTitle>Payment Flows | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">
+            Payment flows
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Initiate a Standard Checkout session or request a Direct Charge from a customer.
+        </RadzenText>
+    </div>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <div>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Payment flow</RadzenText>
+                <RadzenDropDown TValue="string"
+                                Data="@paymentFlows"
+                                @bind-Value="selectedPaymentFlow"
+                                Style="width: 100%" />
+            </div>
+
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Amount</RadzenText>
+                    <RadzenNumeric TValue="decimal"
+                                   @bind-Value="amount"
+                                   Min="1"
+                                   Format="N2"
+                                   Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Currency</RadzenText>
+                    <RadzenDropDown TValue="PayChanguCurrency"
+                                    Data="@currencies"
+                                    @bind-Value="currency"
+                                    Style="width: 100%" />
+                </RadzenColumn>
+            </RadzenRow>
+
+            @if (selectedPaymentFlow == "Standard Checkout")
+            {
+                <RadzenDivider />
+                <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenTextBox @bind-Value="firstName"
+                                       Placeholder="First name"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenTextBox @bind-Value="lastName"
+                                       Placeholder="Last name"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="12">
+                        <RadzenTextBox @bind-Value="email"
+                                       Placeholder="Email address"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenText TextStyle="TextStyle.Subtitle2">Checkout URLs</RadzenText>
+                <RadzenTextBox @bind-Value="callbackUrl"
+                               Placeholder="Callback URL"
+                               Style="width: 100%" />
+                <RadzenTextBox @bind-Value="returnUrl"
+                               Placeholder="Return URL"
+                               Style="width: 100%" />
+                <RadzenText TextStyle="TextStyle.Caption">
+                    Use publicly accessible URLs belonging to your application.
+                </RadzenText>
+            }
+            else
+            {
+                <RadzenDivider />
+                <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                @if (selectedPaymentFlow == "Mobile Money Direct Charge")
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Mobile Money operator</RadzenText>
+                    <RadzenDropDown TValue="string"
+                                    Data="@mobileMoneyOperators"
+                                    TextProperty="Name"
+                                    ValueProperty="RefId"
+                                    @bind-Value="selectedOperatorRefId"
+                                    Placeholder="Select an operator"
+                                    Disabled="@isLoadingOperators"
+                                    Style="width: 100%" />
+                    @if (isLoadingOperators)
+                    {
+                        <RadzenText TextStyle="TextStyle.Caption">Loading supported operators...</RadzenText>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(operatorErrorMessage))
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning">
+                            @operatorErrorMessage
+                        </RadzenAlert>
+                    }
+                }
+
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenTextBox @bind-Value="mobile"
+                                       Placeholder="Mobile number"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenTextBox @bind-Value="email"
+                                       Placeholder="Email address (optional)"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenTextBox @bind-Value="firstName"
+                                       Placeholder="First name (optional)"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenTextBox @bind-Value="lastName"
+                                       Placeholder="Last name (optional)"
+                                       Style="width: 100%" />
+                    </RadzenColumn>
+                </RadzenRow>
+
+                @if (selectedPaymentFlow == "Bank Transfer Direct Charge")
+                {
+                    <RadzenCheckBox TValue="bool" @bind-Value="createPermanentAccount" />
+                    <RadzenLabel Text="Request a permanent bank account" />
+                }
+            }
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger">
+                    @errorMessage
+                </RadzenAlert>
+            }
+
+            <div>
+                <RadzenButton Text="Initiate payment"
+                              Icon="payments"
+                              Click="@InitiatePaymentAsync"
+                              Disabled="@isLoading" />
+            </div>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (isLoading)
+    {
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.Body2">Sending payment request to PayChangu...</RadzenText>
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrWhiteSpace(checkoutUrl))
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenAlert AlertStyle="AlertStyle.Success">
+                    Checkout session created. The customer must complete payment on PayChangu.
+                </RadzenAlert>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Transaction reference</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@transactionIdentifier</RadzenText>
+                <a href="@checkoutUrl" target="_blank" rel="noopener noreferrer">Open PayChangu checkout</a>
+            </RadzenStack>
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrWhiteSpace(chargeId))
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenAlert AlertStyle="AlertStyle.Info">
+                    The Direct Charge request was accepted. This does not mean the customer has completed payment.
+                    Verify the transaction or process its webhook before fulfilling an order.
+                </RadzenAlert>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@chargeId</RadzenText>
+                @if (!string.IsNullOrWhiteSpace(transactionIdentifier))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Transaction reference</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@transactionIdentifier</RadzenText>
+                }
+                @if (!string.IsNullOrWhiteSpace(paymentStatus))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Current status</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@paymentStatus</RadzenText>
+                }
+                @if (!string.IsNullOrWhiteSpace(paymentInstructions))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Payment instructions</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">@paymentInstructions</RadzenText>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+
+    private readonly string[] paymentFlows =
+    [
+        "Standard Checkout",
+        "Mobile Money Direct Charge",
+        "Bank Transfer Direct Charge"
+    ];
+
+    private readonly PayChanguCurrency[] currencies =
+        Enum.GetValues<PayChanguCurrency>();
+
+    private readonly List<SupportedMobileMoneyOperator> mobileMoneyOperators = [];
+
+    private string selectedPaymentFlow = "Standard Checkout";
+    private PayChanguCurrency currency = PayChanguCurrency.MWK;
+    private decimal amount = 5000m;
+    private string firstName = string.Empty;
+    private string lastName = string.Empty;
+    private string email = string.Empty;
+    private string mobile = string.Empty;
+    private string callbackUrl = "https://example.com/payments/callback";
+    private string returnUrl = "https://example.com/payments/return";
+    private string? selectedOperatorRefId;
+    private bool createPermanentAccount;
+    private bool isLoading;
+    private bool isLoadingOperators;
+    private string? errorMessage;
+    private string? operatorErrorMessage;
+    private string? checkoutUrl;
+    private string? chargeId;
+    private string? transactionIdentifier;
+    private string? paymentStatus;
+    private string? paymentInstructions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMobileMoneyOperatorsAsync();
+    }
+
+    private async Task LoadMobileMoneyOperatorsAsync()
+    {
+        isLoadingOperators = true;
+        operatorErrorMessage = null;
+
+        try
+        {
+            var response = await payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync();
+
+            if (response.Success && response.Result?.Data is { } operators)
+            {
+                mobileMoneyOperators.AddRange(operators);
+                selectedOperatorRefId = mobileMoneyOperators.FirstOrDefault()?.RefId;
+            }
+            else
+            {
+                operatorErrorMessage = response.ErrorMessage ??
+                    "Unable to retrieve supported Mobile Money operators.";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            operatorErrorMessage = $"Unable to retrieve Mobile Money operators: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingOperators = false;
+        }
+    }
+
+    private async Task InitiatePaymentAsync()
+    {
+        errorMessage = null;
+        checkoutUrl = null;
+        chargeId = null;
+        transactionIdentifier = null;
+        paymentStatus = null;
+        paymentInstructions = null;
+
+        if (amount <= 0)
+        {
+            errorMessage = "Enter an amount greater than zero.";
+            return;
+        }
+
+        if (selectedPaymentFlow == "Standard Checkout" &&
+            (string.IsNullOrWhiteSpace(firstName) ||
+             string.IsNullOrWhiteSpace(lastName) ||
+             string.IsNullOrWhiteSpace(email) ||
+             string.IsNullOrWhiteSpace(callbackUrl) ||
+             string.IsNullOrWhiteSpace(returnUrl)))
+        {
+            errorMessage = "Complete the customer details and checkout URLs.";
+            return;
+        }
+
+        if (selectedPaymentFlow == "Mobile Money Direct Charge" &&
+            (string.IsNullOrWhiteSpace(mobile) ||
+             string.IsNullOrWhiteSpace(selectedOperatorRefId)))
+        {
+            errorMessage = "Enter a mobile number and select a Mobile Money operator.";
+            return;
+        }
+
+        if (selectedPaymentFlow == "Bank Transfer Direct Charge" &&
+            string.IsNullOrWhiteSpace(mobile))
+        {
+            errorMessage = "Enter the customer's mobile number.";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            if (selectedPaymentFlow == "Standard Checkout")
+            {
+                await InitiateCheckoutAsync();
+            }
+            else if (selectedPaymentFlow == "Mobile Money Direct Charge")
+            {
+                await InitiateMobileMoneyDirectChargeAsync();
+            }
+            else
+            {
+                await InitiateBankTransferDirectChargeAsync();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to PayChangu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task InitiateCheckoutAsync()
+    {
+        var reference = Guid.NewGuid().ToString();
+
+        var response = await payChanguClient.Checkout.InitiateAsync(
+            new InitiateCheckoutRequest
+            {
+                Amount = amount,
+                Currency = currency,
+                Email = email.Trim(),
+                FirstName = firstName.Trim(),
+                LastName = lastName.Trim(),
+                TransactionReference = reference,
+                CallbackUrl = callbackUrl.Trim(),
+                ReturnUrl = returnUrl.Trim(),
+                Customization = new PaymentCustomization
+                {
+                    Title = "Sample payment",
+                    Description = "PayChangu.NET Blazor sample payment"
+                }
+            });
+
+        if (!response.Success || response.Result?.Data is not { } data)
+        {
+            errorMessage = response.ErrorMessage ??
+                "PayChangu could not initiate the checkout session.";
+            return;
+        }
+
+        transactionIdentifier = data.Session.TransactionReference;
+        checkoutUrl = data.CheckoutUrl;
+    }
+
+    private async Task InitiateMobileMoneyDirectChargeAsync()
+    {
+        var id = Guid.NewGuid().ToString();
+
+        var response = await payChanguClient.DirectCharges.MobileMoney.InitiateAsync(
+            new InitiateMobileMoneyDirectChargeRequest
+            {
+                Mobile = mobile.Trim(),
+                MobileMoneyOperatorRefId = selectedOperatorRefId!,
+                Amount = amount,
+                ChargeId = id,
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+                FirstName = string.IsNullOrWhiteSpace(firstName) ? null : firstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim()
+            });
+
+        if (!response.Success || response.Result?.Data is not { } data)
+        {
+            errorMessage = response.ErrorMessage ??
+                "PayChangu could not initiate the Mobile Money Direct Charge.";
+            return;
+        }
+
+        chargeId = data.ChargeId;
+        transactionIdentifier = data.ReferenceId;
+        paymentStatus = data.Status;
+    }
+
+    private async Task InitiateBankTransferDirectChargeAsync()
+    {
+        var id = Guid.NewGuid().ToString();
+
+        var response = await payChanguClient.DirectCharges.BankTransfer.InitiateAsync(
+            new InitiateBankTransferDirectChargeRequest
+            {
+                Amount = amount,
+                Currency = currency,
+                ChargeId = id,
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+                FirstName = string.IsNullOrWhiteSpace(firstName) ? null : firstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim(),
+                Mobile = mobile.Trim(),
+                CreatePermanentAccount = createPermanentAccount
+            });
+
+        if (!response.Success || response.Result?.Data is not { } data)
+        {
+            errorMessage = response.ErrorMessage ??
+                "PayChangu could not initiate the Bank Transfer Direct Charge.";
+            return;
+        }
+
+        chargeId = data.Transaction.ChargeId;
+        transactionIdentifier = data.Transaction.ReferenceId;
+        paymentStatus = data.Transaction.Status;
+        paymentInstructions =
+            $"{data.PaymentAccountDetails.BankName} — " +
+            $"Account: {data.PaymentAccountDetails.AccountNumber}; " +
+            $"Name: {data.PaymentAccountDetails.AccountName}";
+    }
+}
