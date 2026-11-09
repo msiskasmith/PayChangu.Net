@@ -147,26 +147,32 @@
                 }
 
                 <RadzenRow Gap="1rem">
-                    <RadzenColumn Size="12" SizeMD="6">
-                        <RadzenTextBox @bind-Value="mobile"
-                                       Placeholder="Mobile number"
-                                       Style="width: 100%" />
-                    </RadzenColumn>
+                    @if (selectedPaymentFlow != "Card Direct Charge")
+                    {
+                        <RadzenColumn Size="12" SizeMD="6">
+                            <RadzenTextBox @bind-Value="mobile"
+                                           Placeholder="Mobile number"
+                                           Style="width: 100%" />
+                        </RadzenColumn>
+                    }
                     <RadzenColumn Size="12" SizeMD="6">
                         <RadzenTextBox @bind-Value="email"
                                        Placeholder="Email address (optional)"
                                        Style="width: 100%" />
                     </RadzenColumn>
-                    <RadzenColumn Size="12" SizeMD="6">
-                        <RadzenTextBox @bind-Value="firstName"
-                                       Placeholder="First name (optional)"
-                                       Style="width: 100%" />
-                    </RadzenColumn>
-                    <RadzenColumn Size="12" SizeMD="6">
-                        <RadzenTextBox @bind-Value="lastName"
-                                       Placeholder="Last name (optional)"
-                                       Style="width: 100%" />
-                    </RadzenColumn>
+                    @if (selectedPaymentFlow != "Card Direct Charge")
+                    {
+                        <RadzenColumn Size="12" SizeMD="6">
+                            <RadzenTextBox @bind-Value="firstName"
+                                           Placeholder="First name (optional)"
+                                           Style="width: 100%" />
+                        </RadzenColumn>
+                        <RadzenColumn Size="12" SizeMD="6">
+                            <RadzenTextBox @bind-Value="lastName"
+                                           Placeholder="Last name (optional)"
+                                           Style="width: 100%" />
+                        </RadzenColumn>
+                    }
                 </RadzenRow>
 
                 @if (selectedPaymentFlow == "Bank Transfer Direct Charge")
@@ -286,7 +292,7 @@
     private string cardNumber = string.Empty;
     private string cardExpiry = string.Empty;
     private string cardCvv = string.Empty;
-    private string cardRedirectUrl = "https://example.com/card-payment-return";
+    private string cardRedirectUrl = string.Empty;
     private string? cardAuthenticationUrl;
     private string callbackUrl = "https://example.com/payments/callback";
     private string returnUrl = "https://example.com/payments/return";
@@ -419,6 +425,13 @@
         }
         finally
         {
+            if (selectedPaymentFlow == "Card Direct Charge")
+            {
+                cardNumber = string.Empty;
+                cardExpiry = string.Empty;
+                cardCvv = string.Empty;
+            }
+
             isLoading = false;
         }
     }
