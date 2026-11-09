@@ -135,7 +135,7 @@
         <RadzenStack Gap="0.5rem">
             <RadzenText TextStyle="TextStyle.H6">Webhook troubleshooting</RadzenText>
             <ul>
-                <li><strong>HTTP 503:</strong> The <code>PayChangu:WebhookSecret</code> user secret is missing. Configure it and restart the sample.</li>
+                <li><strong>HTTP 503:</strong> The <code>PayChangu:SecretKey</code> or <code>PayChangu:WebhookSecret</code> user secret is missing. Configure both secrets and restart the sample.</li>
                 <li><strong>HTTP 401:</strong> The signature could not be validated. Check that the webhook secret matches the one configured in PayChangu.</li>
                 <li><strong>No events appear:</strong> Confirm the sample and ngrok are both running, the registered URL includes <code>/api/webhooks/paychangu</code>, and the relevant event is enabled in PayChangu.</li>
             </ul>
