@@ -227,6 +227,31 @@ public sealed class PayChanguWebhookServiceTests
             result.Source?.MobileMoney?.MobileNumber);
     }
 
+    [Theory]
+    [InlineData("200", 200)]
+    [InlineData("\"200\"", 200)]
+    [InlineData("\"\"", 0)]
+    [InlineData("null", 0)]
+    public void ParseWebhook_UsesDecimalConverterForCharge(
+        string chargeJson,
+        decimal expectedCharge)
+    {
+        // Arrange
+        using var provider = CreateServiceProvider();
+
+        var service = provider.GetRequiredService<IPayChanguWebhookService>();
+
+        var payload = WebhookPayload.Replace(
+            "\"charge\": 200",
+            "\"charge\": " + chargeJson);
+
+        // Act
+        var result = service.ParseWebhook(payload);
+
+        // Assert
+        Assert.Equal(expectedCharge, result.Charge);
+    }
+
     [Fact]
     public void ParseWebhook_ThrowsJsonException_WhenPayloadIsInvalid()
     {
