@@ -126,7 +126,7 @@ public class PaymentsController : Controller
         var request = new InitiateCheckoutRequest
         {
             Amount = 5000m,
-            Currency = "MWK",
+            Currency = PayChanguCurrency.MWK,
             Email = "customer@example.com",
             FirstName = "John",
             LastName = "Banda",
@@ -391,7 +391,7 @@ var chargeId = Guid.NewGuid().ToString();
 var request = new InitiateBankTransferDirectChargeRequest
 {
     Amount = 5000m,
-    Currency = "MWK",
+    Currency = PayChanguCurrency.MWK,
     ChargeId = chargeId,
     Email = "customer@example.com",
     FirstName = "John",
@@ -484,7 +484,7 @@ The currency defaults to `MWK`. You can provide another currency code when retri
 
 ```csharp
 var response = await _payChanguClient.GetSupportedBanksAsync(
-    "MWK",
+    PayChanguCurrency.MWK,
     cancellationToken);
 
 if (!response.Success || response.Result?.Data == null)
@@ -686,7 +686,7 @@ var request = new InitiateCardDirectChargeRequest
     Cvv = cardCvv,
     CardholderName = "John Banda",
     Amount = 5000m,
-    Currency = "MWK",
+    Currency = PayChanguCurrency.MWK,
     ChargeId = chargeId,
     RedirectUrl = "https://example.com/payments/card/return",
     Email = "customer@example.com"
@@ -814,7 +814,7 @@ To retrieve the balance for a different currency:
 
 ```csharp
 var response = await _payChanguClient.GetBalanceAsync(
-    "USD",
+    PayChanguCurrency.USD,
     cancellationToken);
 
 if (!response.Success || response.Result?.Data == null)
