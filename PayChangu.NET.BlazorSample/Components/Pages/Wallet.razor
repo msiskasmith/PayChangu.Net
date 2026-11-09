@@ -1,0 +1,123 @@
+@page "/wallet"
+
+<PageTitle>Wallet Balance | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">
+            Wallet balance
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Retrieve the balance of your PayChangu wallet for a selected currency.
+        </RadzenText>
+    </div>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.End"
+                         Gap="1rem"
+                         Wrap="FlexWrap.Wrap">
+                <div>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Currency</RadzenText>
+                    <RadzenDropDown TValue="PayChanguCurrency"
+                                    Data="@currencies"
+                                    @bind-Value="selectedCurrency"
+                                    Style="width: 180px" />
+                </div>
+
+                <RadzenButton Text="Refresh balance"
+                              Icon="refresh"
+                              Click="@LoadBalanceAsync"
+                              Disabled="@isLoading" />
+            </RadzenStack>
+
+            @if (isLoading)
+            {
+                <RadzenText TextStyle="TextStyle.Body2">
+                    Retrieving wallet balance...
+                </RadzenText>
+            }
+            else if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger">
+                    @errorMessage
+                </RadzenAlert>
+            }
+            else if (balance?.Result?.Data is { } data)
+            {
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenCard Variant="Variant.Outlined">
+                            <RadzenText TextStyle="TextStyle.Subtitle2">
+                                Main balance
+                            </RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4">
+                                @data.Currency @data.MainBalance
+                            </RadzenText>
+                        </RadzenCard>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenCard Variant="Variant.Outlined">
+                            <RadzenText TextStyle="TextStyle.Subtitle2">
+                                Collection balance
+                            </RadzenText>
+                            <RadzenText TextStyle="TextStyle.H4">
+                                @data.Currency @data.CollectionBalance.ToString("N2")
+                            </RadzenText>
+                        </RadzenCard>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenText TextStyle="TextStyle.Caption">
+                    Environment: @data.Environment
+                </RadzenText>
+            }
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private readonly PayChanguCurrency[] currencies =
+        Enum.GetValues<PayChanguCurrency>();
+
+    private PayChanguCurrency selectedCurrency = PayChanguCurrency.MWK;
+    private PayChanguApiResponse<GetBalanceResponse>? balance;
+    private string? errorMessage;
+    private bool isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBalanceAsync();
+    }
+
+    private async Task LoadBalanceAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        balance = null;
+
+        try
+        {
+            balance = await PayChanguClient.Wallet.GetBalanceAsync(selectedCurrency);
+
+            if (!balance.Success)
+            {
+                errorMessage = balance.ErrorMessage ??
+                    "PayChangu could not retrieve the wallet balance.";
+            }
+            else if (balance.Result?.Data is null)
+            {
+                errorMessage = "PayChangu returned no wallet balance data.";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to PayChangu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
