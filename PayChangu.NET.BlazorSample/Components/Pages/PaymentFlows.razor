@@ -88,6 +88,41 @@
             {
                 <RadzenDivider />
                 <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                @if (selectedPaymentFlow == "Card Direct Charge")
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning">
+                        <strong>PCI DSS requirement:</strong> PayChangu requires your business to be PCI DSS compliant
+                        before processing direct card charges. PayChangu must also activate Card Direct Charge on your account.
+                        Do not use this form for real card details unless your environment meets those requirements.
+                    </RadzenAlert>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Card details</RadzenText>
+                    <RadzenTextBox @bind-Value="cardholderName"
+                                   Placeholder="Name on card"
+                                   Style="width: 100%" />
+                    <RadzenTextBox @bind-Value="cardNumber"
+                                   Placeholder="Card number"
+                                   Style="width: 100%" />
+                    <RadzenRow Gap="1rem">
+                        <RadzenColumn Size="6">
+                            <RadzenTextBox @bind-Value="cardExpiry"
+                                           Placeholder="Expiry (MM/YY)"
+                                           Style="width: 100%" />
+                        </RadzenColumn>
+                        <RadzenColumn Size="6">
+                            <RadzenTextBox @bind-Value="cardCvv"
+                                           Type="password"
+                                           Placeholder="CVV"
+                                           Style="width: 100%" />
+                        </RadzenColumn>
+                    </RadzenRow>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">3-D Secure return URL</RadzenText>
+                    <RadzenTextBox @bind-Value="cardRedirectUrl"
+                                   Placeholder="Public URL ending in /card-payment-return"
+                                   Style="width: 100%" />
+                    <RadzenText TextStyle="TextStyle.Caption">
+                        This URL must be publicly accessible over HTTPS. For local testing, use your tunnel URL.
+                    </RadzenText>
+                }
                 @if (selectedPaymentFlow == "Mobile Money Direct Charge")
                 {
                     <RadzenText TextStyle="TextStyle.Subtitle2">Mobile Money operator</RadzenText>
@@ -176,6 +211,23 @@
             </RadzenStack>
         </RadzenCard>
     }
+    else if (!string.IsNullOrWhiteSpace(cardAuthenticationUrl))
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenAlert AlertStyle="AlertStyle.Info">
+                    Card charge initiated. The customer must complete 3-D Secure authentication before the payment can be verified.
+                </RadzenAlert>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@chargeId</RadzenText>
+                <a href="@cardAuthenticationUrl">Continue to 3-D Secure authentication</a>
+                <RadzenText TextStyle="TextStyle.Caption">
+                    After authentication, PayChangu returns the customer to the configured return URL.
+                    The return page verifies the transaction with PayChangu.
+                </RadzenText>
+            </RadzenStack>
+        </RadzenCard>
+    }
     else if (!string.IsNullOrWhiteSpace(chargeId))
     {
         <RadzenCard>
@@ -214,7 +266,8 @@
     [
         "Standard Checkout",
         "Mobile Money Direct Charge",
-        "Bank Transfer Direct Charge"
+        "Bank Transfer Direct Charge",
+        "Card Direct Charge"
     ];
 
     private readonly PayChanguCurrency[] currencies =
@@ -229,6 +282,12 @@
     private string lastName = string.Empty;
     private string email = string.Empty;
     private string mobile = string.Empty;
+    private string cardholderName = string.Empty;
+    private string cardNumber = string.Empty;
+    private string cardExpiry = string.Empty;
+    private string cardCvv = string.Empty;
+    private string cardRedirectUrl = "https://example.com/card-payment-return";
+    private string? cardAuthenticationUrl;
     private string callbackUrl = "https://example.com/payments/callback";
     private string returnUrl = "https://example.com/payments/return";
     private string? selectedOperatorRefId;
@@ -288,6 +347,7 @@
         providerReference = null;
         paymentStatus = null;
         paymentInstructions = null;
+        cardAuthenticationUrl = null;
 
         if (amount <= 0)
         {
@@ -321,6 +381,17 @@
             return;
         }
 
+        if (selectedPaymentFlow == "Card Direct Charge" &&
+            (string.IsNullOrWhiteSpace(cardholderName) ||
+             string.IsNullOrWhiteSpace(cardNumber) ||
+             string.IsNullOrWhiteSpace(cardExpiry) ||
+             string.IsNullOrWhiteSpace(cardCvv) ||
+             string.IsNullOrWhiteSpace(cardRedirectUrl)))
+        {
+            errorMessage = "Complete all card details and provide a 3-D Secure return URL.";
+            return;
+        }
+
         isLoading = true;
 
         try
@@ -333,9 +404,13 @@
             {
                 await InitiateMobileMoneyDirectChargeAsync();
             }
-            else
+            else if (selectedPaymentFlow == "Bank Transfer Direct Charge")
             {
                 await InitiateBankTransferDirectChargeAsync();
+            }
+            else
+            {
+                await InitiateCardDirectChargeAsync();
             }
         }
         catch (HttpRequestException ex)
@@ -407,6 +482,45 @@
         chargeId = data.ChargeId;
         providerReference = data.ReferenceId;
         paymentStatus = data.Status;
+    }
+
+    private async Task InitiateCardDirectChargeAsync()
+    {
+        var id = Guid.NewGuid().ToString();
+
+        var response = await payChanguClient.DirectCharges.Card.InitiateAsync(
+            new InitiateCardDirectChargeRequest
+            {
+                CardNumber = cardNumber.Trim(),
+                Expiry = cardExpiry.Trim(),
+                Cvv = cardCvv.Trim(),
+                CardholderName = cardholderName.Trim(),
+                Amount = amount,
+                Currency = currency,
+                ChargeId = id,
+                RedirectUrl = cardRedirectUrl.Trim(),
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim()
+            });
+
+        if (!response.Success || response.Result is not { Success: true } data)
+        {
+            errorMessage = response.ErrorMessage ??
+                "PayChangu could not initiate the Card Direct Charge.";
+            return;
+        }
+
+        chargeId = id;
+        providerReference = data.OrderReference;
+        paymentStatus = "Awaiting 3-D Secure authentication";
+
+        if (!data.Requires3DSAuth || string.IsNullOrWhiteSpace(data.ThreeDSAuthLink))
+        {
+            errorMessage = "PayChangu did not return the expected 3-D Secure authentication link.";
+            chargeId = null;
+            return;
+        }
+
+        cardAuthenticationUrl = data.ThreeDSAuthLink;
     }
 
     private async Task InitiateBankTransferDirectChargeAsync()
