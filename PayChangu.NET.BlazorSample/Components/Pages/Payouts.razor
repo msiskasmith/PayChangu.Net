@@ -47,6 +47,7 @@
                                 TextProperty="Name"
                                 ValueProperty="RefId"
                                 @bind-Value="selectedOperatorRefId"
+                                Change="@OnOperatorChanged"
                                 Placeholder="Select an operator"
                                 Disabled="@isLoadingReferenceData"
                                 Style="width: 100%" />
@@ -90,7 +91,11 @@
             }
 
             <hr/>
-            <RadzenText TextStyle="TextStyle.Subtitle2">Recipient details (optional)</RadzenText>
+            <RadzenRow AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenText TextStyle="TextStyle.Subtitle2">Recipient details (optional)</RadzenText>
+                <RadzenButton Text="Refresh details" Icon="refresh" Size="ButtonSize.Small"
+                              Click="@GenerateTestDetails" />
+            </RadzenRow>
             <RadzenRow Gap="1rem">
                 <RadzenColumn Size="12" SizeMD="6">
                     <RadzenTextBox @bind-Value="firstName"
@@ -172,6 +177,8 @@
 @code {
     [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
 
+    private readonly Faker faker = new();
+
     private readonly string[] payoutMethods = ["Mobile Money", "Bank Transfer"];
     private readonly PayChanguCurrency[] currencies = Enum.GetValues<PayChanguCurrency>();
     private readonly List<SupportedMobileMoneyOperator> mobileMoneyOperators = [];
@@ -200,6 +207,40 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadReferenceDataAsync();
+        GenerateTestDetails();
+    }
+
+    private void GenerateTestDetails()
+    {
+        firstName = faker.Name.FirstName();
+        lastName = faker.Name.LastName();
+        email = faker.Internet.Email();
+        bankAccountName = faker.Name.FullName();
+        bankAccountNumber = faker.Random.ReplaceNumbers("##########");
+        mobile = GetTestMobileNumber(selectedOperatorRefId, mobileMoneyOperators);
+    }
+
+    private void OnOperatorChanged(object value)
+    {
+        selectedOperatorRefId = value?.ToString();
+        mobile = GetTestMobileNumber(selectedOperatorRefId, mobileMoneyOperators);
+    }
+
+    private string GetTestMobileNumber(string? operatorRefId, IEnumerable<SupportedMobileMoneyOperator> operators)
+    {
+        var operatorName = operators.FirstOrDefault(x => x.RefId == operatorRefId)?.Name ?? string.Empty;
+
+        if (operatorName.Contains("TNM", StringComparison.OrdinalIgnoreCase))
+        {
+            return "0888000000";
+        }
+
+        if (operatorName.Contains("Airtel", StringComparison.OrdinalIgnoreCase))
+        {
+            return "0999000000";
+        }
+
+        return faker.Random.ReplaceNumbers("09########");
     }
 
     private async Task OnCurrencyChanged(object value)
@@ -225,6 +266,8 @@
             {
                 selectedOperatorRefId = mobileMoneyOperators.FirstOrDefault()?.RefId;
             }
+
+            mobile = GetTestMobileNumber(selectedOperatorRefId, mobileMoneyOperators);
         }
         else
         {
