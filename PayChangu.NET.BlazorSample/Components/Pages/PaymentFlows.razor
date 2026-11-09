@@ -588,8 +588,8 @@
                 Currency = currency,
                 ChargeId = id,
                 Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
-                FirstName = string.IsNullOrWhiteSpace(firstName) ? null : firstName.Trim(),
-                LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName.Trim(),
+                FirstName = firstName.Trim(),
+                LastName = lastName.Trim(),
                 Mobile = mobile.Trim(),
                 CreatePermanentAccount = createPermanentAccount
             });
