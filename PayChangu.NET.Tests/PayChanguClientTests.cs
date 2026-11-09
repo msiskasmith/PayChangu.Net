@@ -2688,7 +2688,7 @@ public sealed class PayChanguClientTests
     {
         // Arrange
         const string json = """
-{
+    {
         "status": "success",
         "message": "Payout processed successfully.",
         "data": {
