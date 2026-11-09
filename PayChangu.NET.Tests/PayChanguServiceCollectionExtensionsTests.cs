@@ -59,8 +59,18 @@ public sealed class PayChanguServiceCollectionExtensionsTests
         var client = provider.GetRequiredService<IPayChanguClient>();
 
         Assert.NotNull(client);
+        Assert.NotNull(client.Checkout);
+        Assert.NotNull(client.DirectCharges.MobileMoney);
+        Assert.NotNull(client.DirectCharges.BankTransfer);
+        Assert.NotNull(client.DirectCharges.Card);
+        Assert.NotNull(client.Payouts.MobileMoney);
+        Assert.NotNull(client.Payouts.Bank);
+        Assert.NotNull(client.Transactions);
+        Assert.NotNull(client.Wallet);
+        Assert.NotNull(client.ReferenceData.MobileMoneyOperators);
+        Assert.NotNull(client.ReferenceData.Banks);
 
-        await client.InitiateCheckoutAsync(new Models.InitiateCheckoutRequest
+        await client.Checkout.InitiateAsync(new Models.InitiateCheckoutRequest
         {
             Amount = 5000,
             Currency = PayChanguCurrency.MWK,
