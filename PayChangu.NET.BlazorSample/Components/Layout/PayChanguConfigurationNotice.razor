@@ -1,13 +1,43 @@
- <RadzenCard>
+<RadzenCard>
     <RadzenStack Gap="0.75rem">
-        <RadzenText TextStyle="TextStyle.H6">PayChangu API key not configured</RadzenText>
-        <RadzenText TextStyle="TextStyle.Body2">
-            The sample application has started, but the PayChangu API examples are unavailable until
-            you configure your API secret key. Use .NET User Secrets to keep the key out of source control.
+        <RadzenText TextStyle="TextStyle.H6">
+            PayChangu API key not configured
         </RadzenText>
+
         <RadzenText TextStyle="TextStyle.Body2">
-            Open a terminal in the <code>PayChangu.NET.BlazorSample</code> project directory and run:
+            The sample application has started, but the PayChangu API examples are unavailable
+            until you configure your API secret key. Use .NET User Secrets to keep your key
+            out of source control.
         </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body2">
+            Follow these steps to configure your API key:
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body2">
+            <strong>1. Open a terminal</strong>
+            Open PowerShell, Command Prompt, or your preferred terminal.
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body2">
+            <strong>2. Navigate to the sample project directory</strong>
+            From the repository's root directory, run:
+        </RadzenText>
+
+        <RadzenAlert AlertStyle="AlertStyle.Dark"
+                     ShowIcon="false"
+                     AllowClose="false"
+                     Variant="Variant.Flat"
+                     Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+            <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">cd PayChangu.NET.BlazorSample</code></pre>
+        </RadzenAlert>
+
+        <RadzenText TextStyle="TextStyle.Body2">
+            <strong>3. Configure your PayChangu API secret key</strong>
+            Run the following command from the sample project directory, replacing the placeholder
+            with your actual PayChangu secret key:
+        </RadzenText>
+
         <RadzenAlert AlertStyle="AlertStyle.Dark"
                      ShowIcon="false"
                      AllowClose="false"
@@ -15,9 +45,29 @@
                      Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
             <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet user-secrets set "PayChangu:SecretKey" "&lt;your-paychangu-secret-key&gt;"</code></pre>
         </RadzenAlert>
+
         <RadzenText TextStyle="TextStyle.Body2">
-            After saving the secret, restart the sample application. This notice will disappear and
-            the examples will become available.
+            <strong>4. Start or restart the sample application</strong>
+            If the application is already running, stop it first. Then run:
         </RadzenText>
+
+        <RadzenAlert AlertStyle="AlertStyle.Dark"
+                     ShowIcon="false"
+                     AllowClose="false"
+                     Variant="Variant.Flat"
+                     Style="background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e;">
+            <pre style="margin: 0; overflow-x: auto; color: inherit;"><code style="color: inherit; font-family: Consolas, 'Courier New', monospace;">dotnet run</code></pre>
+        </RadzenAlert>
+
+        <RadzenText TextStyle="TextStyle.Body2">
+            Once the application restarts, this notice will disappear and the PayChangu API
+            examples will become available.
+        </RadzenText>
+
+        <RadzenAlert AlertStyle="AlertStyle.Warning"
+                     ShowIcon="true"
+                     AllowClose="false">
+            Never commit your PayChangu secret key to source control or share it publicly.
+        </RadzenAlert>
     </RadzenStack>
 </RadzenCard>

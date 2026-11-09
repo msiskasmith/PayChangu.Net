@@ -21,6 +21,7 @@ public sealed class PayChanguTransaction
     /// Gets or sets the PayChangu transaction reference.
     /// </summary>
     [JsonPropertyName("ref_id")]
+    [JsonConverter(typeof(PayChanguStringJsonConverter))]
     public string ReferenceId { get; set; } = null!;
 
     /// <summary>

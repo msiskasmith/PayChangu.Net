@@ -72,9 +72,12 @@ app.MapPost("/api/webhooks/paychangu", async (
     {
         webhookEvent = webhookService.ParseWebhook(payload);
     }
-    catch (System.Text.Json.JsonException)
+    catch (System.Text.Json.JsonException ex)
     {
-        logger.LogWarning("Rejected a signed PayChangu webhook with an invalid payload.");
+        logger.LogWarning(
+            ex,
+            "Rejected a signed PayChangu webhook with an invalid payload.");
+
         return Results.BadRequest();
     }
 

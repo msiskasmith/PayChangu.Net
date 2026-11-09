@@ -65,6 +65,7 @@ public sealed class PayChanguWebhookEvent
     /// Gets or sets the PayChangu transaction reference.
     /// </summary>
     [JsonPropertyName("reference")]
+    [JsonConverter(typeof(PayChanguStringJsonConverter))]
     public string Reference { get; set; } = null!;
 
     /// <summary>
@@ -302,6 +303,7 @@ public sealed class PayChanguBankPaymentDetails
     /// Gets or sets the payer bank account number.
     /// </summary>
     [JsonPropertyName("payer_account_number")]
+    [JsonConverter(typeof(PayChanguStringJsonConverter))]
     public string PayerAccountNumber { get; set; } = null!;
 
     /// <summary>
