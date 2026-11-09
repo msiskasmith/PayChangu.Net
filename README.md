@@ -1023,7 +1023,6 @@ if (!string.IsNullOrWhiteSpace(response.RawJsonResponse))
 
 `RawJsonResponse` is a raw response body, not a parsed or normalized object. It may be `null` when no response body is available. Use `Result` for normal SDK interactions, and use the raw JSON when you specifically need access to the original payload. Be mindful that API responses may contain customer or transaction information; avoid writing the raw payload to logs that are not appropriately protected.
 
-
 ## License
 
 This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
