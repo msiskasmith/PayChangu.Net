@@ -21,9 +21,7 @@ public interface IPayChanguWalletClient
     /// A response containing the wallet balance, or failure details
     /// if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
+
     Task<PayChanguApiResponse<GetBalanceResponse>> GetBalanceAsync(
         PayChanguCurrency currency = PayChanguCurrency.MWK,
         CancellationToken cancellationToken = default);

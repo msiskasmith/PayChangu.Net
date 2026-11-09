@@ -19,7 +19,7 @@
 
 		<!-- NuGet Package Metadata -->
 		<PackageId>PayChangu.NET</PackageId>
-		<Version>0.2.2</Version>
+		<Version>0.2.3</Version>
 		<Description>A strongly typed .NET SDK for integrating with the PayChangu payment gateway, supporting Standard Checkout, Direct Charges, transaction verification, payouts, wallet balances, and webhook signature validation.</Description>
 		<PackageTags>PayChangu;Payments;Malawi;PaymentGateway;Checkout;DirectCharge;MobileMoney;BankTransfer;Payout;Webhooks;DotNet</PackageTags>
 
@@ -46,7 +46,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -40,12 +40,6 @@ public interface IPayChanguMobileMoneyPayoutClient
     /// A response containing the initiated payout details, or failure
     /// details if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
     Task<PayChanguApiResponse<InitiateMobileMoneyPayoutResponse>> InitiateAsync(
         InitiateMobileMoneyPayoutRequest request,
         CancellationToken cancellationToken = default);
@@ -69,12 +63,6 @@ public interface IPayChanguBankPayoutClient
     /// A response containing the initiated payout details, or failure
     /// details if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
     Task<PayChanguApiResponse<InitiateBankPayoutResponse>> InitiateAsync(
         InitiateBankPayoutRequest request,
         CancellationToken cancellationToken = default);
@@ -90,12 +78,7 @@ public interface IPayChanguBankPayoutClient
     /// A response containing the bank payout transaction details, or failure
     /// details if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="PayChanguException">
-    /// Thrown when the charge ID is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
+
     Task<PayChanguApiResponse<GetSingleBankPayoutDetailsResponse>> GetDetailsAsync(
         string chargeId,
         CancellationToken cancellationToken = default);
@@ -114,9 +97,6 @@ public interface IPayChanguBankPayoutClient
     /// A response containing the paginated bank payout transactions,
     /// or failure details if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
     Task<PayChanguApiResponse<GetAllBankPayoutDetailsResponse>> GetAllAsync(
         CancellationToken cancellationToken = default);
 }

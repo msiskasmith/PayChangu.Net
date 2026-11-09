@@ -28,9 +28,6 @@ public interface IPayChanguMobileMoneyOperatorsClient
     /// A response containing the supported mobile money operators, or failure
     /// details if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
     Task<PayChanguApiResponse<GetMobileMoneyOperatorsResponse>> GetAllAsync(
         CancellationToken cancellationToken = default);
 }
@@ -52,12 +49,6 @@ public interface IPayChanguBanksClient
     /// A response containing the supported banks and payout providers,
     /// or failure details if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the currency is null, empty, or consists only of whitespace.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
     Task<PayChanguApiResponse<GetSupportedBanksResponse>> GetSupportedAsync(
         PayChanguCurrency currency = PayChanguCurrency.MWK,
         CancellationToken cancellationToken = default);

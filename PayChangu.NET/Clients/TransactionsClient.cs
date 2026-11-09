@@ -28,16 +28,6 @@ public interface IPayChanguTransactionsClient
     /// A normalized payment verification response, or failure details if
     /// verification was unsuccessful.
     /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the transaction identifier is null, empty, or consists
-    /// only of whitespace.
-    /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when an unsupported payment flow or payment method is supplied.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is cancelled.
-    /// </exception>
     Task<PayChanguApiResponse<VerifyPaymentResponse>> VerifyAsync(
         string transactionIdentifier,
         PayChanguPaymentFlow paymentFlow,
