@@ -18,7 +18,19 @@ public interface IPayChanguReferenceDataClient
 /// <summary>Provides Mobile Money operator reference data operations.</summary>
 public interface IPayChanguMobileMoneyOperatorsClient
 {
-    /// <summary>Retrieves the supported Mobile Money operators.</summary>
+    /// <summary>
+    /// Retrieves the mobile money operators supported by PayChangu.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the asynchronous operation.
+    /// </param>
+    /// <returns>
+    /// A response containing the supported mobile money operators, or failure
+    /// details if the request was unsuccessful.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is cancelled.
+    /// </exception>
     Task<PayChanguApiResponse<GetMobileMoneyOperatorsResponse>> GetAllAsync(
         CancellationToken cancellationToken = default);
 }
@@ -26,7 +38,26 @@ public interface IPayChanguMobileMoneyOperatorsClient
 /// <summary>Provides bank and payout provider reference data operations.</summary>
 public interface IPayChanguBanksClient
 {
-    /// <summary>Retrieves banks and payout providers supported for a currency.</summary>
+    /// <summary>
+    /// Retrieves the banks and payout providers supported by PayChangu
+    /// for the specified currency.
+    /// </summary>
+    /// <param name="currency">
+    /// The currency code used to filter supported providers. Defaults to <c>MWK</c>.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token used to cancel the asynchronous operation.
+    /// </param>
+    /// <returns>
+    /// A response containing the supported banks and payout providers,
+    /// or failure details if the request was unsuccessful.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the currency is null, empty, or consists only of whitespace.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is cancelled.
+    /// </exception>
     Task<PayChanguApiResponse<GetSupportedBanksResponse>> GetSupportedAsync(
         PayChanguCurrency currency = PayChanguCurrency.MWK,
         CancellationToken cancellationToken = default);
