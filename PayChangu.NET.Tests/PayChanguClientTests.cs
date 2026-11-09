@@ -3248,6 +3248,42 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task GetBalanceAsync_ReturnsZero_WhenBalanceValuesAreNullOrEmpty()
+    {
+        // Arrange
+        const string json = """
+        {
+            "status": "success",
+            "message": "Wallet balances retrieved successfully",
+            "data": {
+                "environment": "live",
+                "currency": "MWK",
+                "main_balance": null,
+                "collection_balance": ""
+            }
+        }
+        """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.Wallet.GetBalanceAsync();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotNull(result.Result);
+        Assert.Equal(0m, result.Result.Data.MainBalance);
+        Assert.Equal(0m, result.Result.Data.CollectionBalance);
+    }
+
+    [Fact]
     public async Task GetBalanceAsync_ReturnsFailure_WhenRequestFails()
     {
         // Arrange

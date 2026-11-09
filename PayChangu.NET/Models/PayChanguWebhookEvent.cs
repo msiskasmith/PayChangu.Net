@@ -33,8 +33,8 @@ public sealed class PayChanguWebhookEvent
     /// <summary>
     /// Gets or sets the transaction charge.
     /// </summary>
-    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     [JsonPropertyName("charge")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Charge { get; set; }
 
     /// <summary>

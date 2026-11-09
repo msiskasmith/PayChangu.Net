@@ -85,6 +85,7 @@ internal sealed class ApiPaymentVerificationData
     /// Gets or sets the charges applied to the transaction.
     /// </summary>
     [JsonPropertyName("charges")]
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Charges { get; set; }
 
     /// <summary>

@@ -90,7 +90,7 @@ public sealed class VerifyPaymentResponse : BasePaychanguResponse
     /// <summary>
     /// Gets or sets the transaction amount.
     /// </summary>
-
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 
     /// <summary>
@@ -158,6 +158,7 @@ public sealed class PayChanguVerificationCharges
     /// <summary>
     /// Gets or sets the transaction charge amount.
     /// </summary>
+    [JsonConverter(typeof(PayChanguDecimalJsonConverter))]
     public decimal Amount { get; set; }
 }
 
