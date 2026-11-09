@@ -1,0 +1,114 @@
+@page "/card-payment-return"
+@using PayChangu.NET
+@using PayChangu.NET.Models
+@using PayChangu.NET.Models.Base
+
+<PageTitle>Card Payment Return | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">
+            Card payment return
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            PayChangu has returned the customer from 3-D Secure authentication. The sample verifies the transaction
+            server-side instead of trusting the status in the return URL.
+        </RadzenText>
+    </div>
+
+    @if (string.IsNullOrWhiteSpace(ChargeId))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning">
+            No charge identifier was provided. Return to Payment Flows and initiate a card payment.
+        </RadzenAlert>
+    }
+    else if (isLoading)
+    {
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.Body2">Verifying card payment with PayChangu...</RadzenText>
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger">@errorMessage</RadzenAlert>
+    }
+    else if (verification?.Result is { } result)
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenAlert AlertStyle="@(string.Equals(result.Status, "success", StringComparison.OrdinalIgnoreCase)
+                    ? AlertStyle.Success
+                    : AlertStyle.Warning)">
+                    Verified transaction status: @result.Status
+                </RadzenAlert>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@result.TransactionIdentifier</RadzenText>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Amount</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@result.Currency @result.Amount.ToString("N2")</RadzenText>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Payment method</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@result.PaymentMethod</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption">
+                    In a production application, compare the verified charge identifier, amount, currency and status
+                    against the order details stored on your server before fulfilling the order.
+                </RadzenText>
+            </RadzenStack>
+        </RadzenCard>
+    }
+
+    <a href="/payment-flows">Return to Payment Flows</a>
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "charge_id")]
+    public string? ChargeId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? ReturnStatus { get; set; }
+
+    private PayChanguApiResponse<VerifyPaymentResponse>? verification;
+    private string? errorMessage;
+    private string? lastVerifiedChargeId;
+    private bool isLoading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ChargeId) ||
+            string.Equals(ChargeId, lastVerifiedChargeId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastVerifiedChargeId = ChargeId;
+        isLoading = true;
+        errorMessage = null;
+        verification = null;
+
+        try
+        {
+            verification = await payChanguClient.Transactions.VerifyAsync(
+                ChargeId,
+                PayChanguPaymentFlow.DirectCharge,
+                PayChanguPaymentMethod.Card);
+
+            if (!verification.Success)
+            {
+                errorMessage = verification.ErrorMessage ??
+                    "PayChangu could not verify the card transaction.";
+            }
+            else if (verification.Result is null)
+            {
+                errorMessage = "PayChangu returned no transaction details.";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to PayChangu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

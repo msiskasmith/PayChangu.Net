@@ -38,8 +38,23 @@ Open the local URL shown in the application output.
 
 - The application uses Blazor Interactive Server rendering. PayChangu API calls and secret-key handling stay on the server.
 - The PayChangu client is registered through `AddPayChangu` and can be injected into components or application services using `IPayChanguClient`.
-- The Payment Flows page demonstrates Standard Checkout, Mobile Money Direct Charge, and Bank Transfer Direct Charge initiation.
+- The Payment Flows page demonstrates Standard Checkout, Mobile Money Direct Charge, Bank Transfer Direct Charge, and Card Direct Charge with 3-D Secure authentication. The `/card-payment-return` page verifies a card transaction after the customer returns from authentication.
 - The Payouts page demonstrates Mobile Money and bank payout initiation using the supported payout operators and banks.
 - The Transactions page demonstrates payment verification. A successful Direct Charge initiation is not proof of payment; verify the transaction or process its webhook before fulfilling an order.
 - The Webhooks page demonstrates the `POST /api/webhooks/paychangu` endpoint, including signature validation and parsing of Checkout, Direct Charge, and payout events. The endpoint logs accepted event details to the application log.
 - To receive live PayChangu webhooks during local development, expose the local application through a secure public tunnel and configure that public URL as the webhook endpoint. The endpoint requires the `PayChangu:WebhookSecret` user secret.
+
+
+## Card Direct Charge and PCI DSS
+
+**PCI DSS compliance is mandatory for PayChangu Card Direct Charge.** PayChangu requires merchants to be PCI DSS compliant before processing direct card charges. After certification, contact PayChangu to have Card Direct Charge activated on your account. See the [PayChangu Card Direct Charge documentation](https://developer.paychangu.com/docs/card).
+
+The Card Direct Charge example collects card number, expiry date, and CVV in the Blazor application and sends them to PayChangu through the server-side SDK. This means the application handles sensitive cardholder data.
+
+- Do not use the Card Direct Charge example with real card details unless your business and application environment meet the applicable PCI DSS requirements and PayChangu has activated the feature on your account.
+- Use PayChangu sandbox credentials and test card details for development.
+- Never log or store the CVV. Do not log or unnecessarily retain card numbers or expiry details.
+- The sample does not provide PCI DSS certification or make an application compliant.
+- If you are not set up to handle cardholder data, use Standard Checkout so card details are entered on PayChangu's hosted checkout instead.
+
+The Card Direct Charge flow redirects the customer to PayChangu's 3-D Secure authentication page. Set the return URL to your publicly accessible application URL ending in `/card-payment-return`. After the customer returns, the sample verifies the transaction with PayChangu; it does not trust the status supplied in the return URL.
