@@ -99,7 +99,7 @@ Standard Checkout allows you to initiate a payment and redirect the customer to 
 
 ### Initiating a payment
 
-Inject `IPayChanguClient` into your application service or controller. Create an `InitiateCheckoutRequest` and pass it to `InitiatePaymentAsync`.
+Inject `IPayChanguClient` into your application service or controller. Create an `InitiateCheckoutRequest` and pass it to `InitiateCheckoutAsync`.
 
 ```csharp
 using System;
@@ -148,7 +148,7 @@ public class PaymentsController : Controller
             }
         };
 
-        var response = await _payChanguClient.InitiatePaymentAsync(
+        var response = await _payChanguClient.InitiateCheckoutAsync(
             request,
             cancellationToken);
 

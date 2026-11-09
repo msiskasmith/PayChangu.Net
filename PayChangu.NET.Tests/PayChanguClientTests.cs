@@ -75,7 +75,7 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task InitiatePaymentAsync_ShouldReturnPaymentResponse_WhenSuccessful()
+    public async Task InitiateCheckoutAsync_ShouldReturnPaymentResponse_WhenSuccessful()
     {
         // Arrange
         var json = """
@@ -108,7 +108,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiatePaymentAsync(
+        var result = await client.InitiateCheckoutAsync(
             CreatePaymentRequest());
 
         // Assert
@@ -137,7 +137,7 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task InitiatePaymentAsync_ShouldReturnFailureResponse_WhenRequestFails()
+    public async Task InitiateCheckoutAsync_ShouldReturnFailureResponse_WhenRequestFails()
     {
         // Arrange
         const string errorContent = """
@@ -157,7 +157,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiatePaymentAsync(CreatePaymentRequest());
+        var result = await client.InitiateCheckoutAsync(CreatePaymentRequest());
 
         // Assert
         Assert.NotNull(result);
@@ -169,7 +169,7 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task InitiatePaymentAsync_ShouldReturnFailureResponse_WhenResponseIsInvalid()
+    public async Task InitiateCheckoutAsync_ShouldReturnFailureResponse_WhenResponseIsInvalid()
     {
         // Arrange
         const string invalidJson = "Invalid JSON";
@@ -184,7 +184,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        var result = await client.InitiatePaymentAsync(CreatePaymentRequest());
+        var result = await client.InitiateCheckoutAsync(CreatePaymentRequest());
 
         // Assert
         Assert.NotNull(result);
@@ -362,7 +362,7 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
-    public async Task InitiatePaymentAsync_ShouldSendCorrectHttpRequest()
+    public async Task InitiateCheckoutAsync_ShouldSendCorrectHttpRequest()
     {
         // Arrange
         var handler = new FakeHttpMessageHandler(
@@ -394,7 +394,7 @@ public sealed class PayChanguClientTests
         var client = serviceProvider.GetRequiredService<IPayChanguClient>();
 
         // Act
-        await client.InitiatePaymentAsync(CreatePaymentRequest());
+        await client.InitiateCheckoutAsync(CreatePaymentRequest());
 
         // Assert
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
