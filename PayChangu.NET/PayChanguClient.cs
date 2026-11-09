@@ -360,9 +360,6 @@ public interface IPayChanguClient
     /// A response containing the wallet balance, or failure details
     /// if the request was unsuccessful.
     /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the currency is null, empty, or consists only of whitespace.
-    /// </exception>
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is cancelled.
     /// </exception>
