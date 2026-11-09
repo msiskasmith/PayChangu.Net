@@ -1,7 +1,27 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>PayChangu.NET Sample</PageTitle>
 
-<h1>Hello, world!</h1>
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">
+            PayChangu.NET sample
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Explore the PayChangu.NET SDK through practical payment integration examples.
+        </RadzenText>
+    </div>
 
-Welcome to your new app.
+    <RadzenCard>
+        <RadzenStack Gap="0.5rem">
+            <RadzenText TextStyle="TextStyle.H6">Getting started</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">
+                The SDK is registered with dependency injection and configured using your
+                PayChangu secret key from .NET User Secrets.
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">
+                Choose an example from the navigation as the payment flows are added.
+            </RadzenText>
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
