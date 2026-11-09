@@ -1,4 +1,6 @@
 @page "/webhooks"
+@using PayChangu.NET.BlazorSample.Services
+@inject WebhookEventStore eventStore
 
 <PageTitle>Webhooks | PayChangu.NET Sample</PageTitle>
 
@@ -12,7 +14,9 @@
 
     <RadzenAlert AlertStyle="AlertStyle.Info">
         This sample exposes a server-side webhook endpoint. It validates the raw request body using the configured
-        webhook secret, parses the event, and writes the event details to the application log.
+        webhook secret, parses the event, and stores accepted event details for display below.
+        The most recent 100 events are kept in memory and remain available when you navigate away and return.
+        They are cleared when the application restarts.
     </RadzenAlert>
 
     <RadzenCard>
@@ -34,6 +38,86 @@
 
     <RadzenCard>
         <RadzenStack Gap="0.75rem">
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenText TextStyle="TextStyle.H6">Received events (@events.Count)</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                    <RadzenButton Text="Refresh"
+                                  Icon="refresh"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@RefreshEvents" />
+                    <RadzenButton Text="Clear logs"
+                                  Icon="delete"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@ClearEvents"
+                                  Disabled="@(events.Count == 0)" />
+                </RadzenStack>
+            </RadzenStack>
+
+            @if (events.Count == 0)
+            {
+                <RadzenText TextStyle="TextStyle.Body2">
+                    No webhook events have been received yet. Accepted events will appear here.
+                </RadzenText>
+            }
+            else
+            {
+                @foreach (var webhookEvent in events)
+                {
+                    <RadzenCard Variant="Variant.Outlined">
+                        <RadzenStack Gap="0.5rem">
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         AlignItems="AlignItems.Center"
+                                         JustifyContent="JustifyContent.SpaceBetween">
+                                <RadzenText TextStyle="TextStyle.Subtitle1">
+                                    @webhookEvent.EventType
+                                </RadzenText>
+                                <RadzenBadge Text="@webhookEvent.Status"
+                                             BadgeStyle="@(string.Equals(webhookEvent.Status, "success", StringComparison.OrdinalIgnoreCase)
+                                                 ? BadgeStyle.Success
+                                                 : BadgeStyle.Warning)" />
+                            </RadzenStack>
+
+                            <RadzenRow Gap="0.5rem">
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Transaction identifier</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.TransactionIdentifier</RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Amount</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @webhookEvent.Currency @webhookEvent.Amount.ToString("N2")
+                                    </RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Payment flow</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.PaymentFlow</RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Payment method</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.PaymentMethod</RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Environment</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.Mode</RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="6">
+                                    <RadzenText TextStyle="TextStyle.Caption">Received</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @webhookEvent.ReceivedAt.ToLocalTime().ToString("g")
+                                    </RadzenText>
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </RadzenStack>
+                    </RadzenCard>
+                }
+            }
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
             <RadzenText TextStyle="TextStyle.H6">Events handled</RadzenText>
             <ul>
                 <li>Standard Checkout — <code>checkout.payment</code></li>
@@ -42,7 +126,7 @@
             </ul>
             <RadzenText TextStyle="TextStyle.Body2">
                 The parsed event exposes its payment flow, payment method, transaction identifier, and status.
-                The sample logs these details without logging the raw payload or signature.
+                The sample stores these details without storing the raw payload or signature.
             </RadzenText>
         </RadzenStack>
     </RadzenCard>
@@ -64,3 +148,23 @@
         </RadzenStack>
     </RadzenCard>
 </RadzenStack>
+
+@code {
+    private IReadOnlyList<WebhookEventLogEntry> events = [];
+
+    protected override void OnInitialized()
+    {
+        RefreshEvents();
+    }
+
+    private void RefreshEvents()
+    {
+        events = eventStore.GetRecentEvents();
+    }
+
+    private void ClearEvents()
+    {
+        eventStore.Clear();
+        RefreshEvents();
+    }
+}
