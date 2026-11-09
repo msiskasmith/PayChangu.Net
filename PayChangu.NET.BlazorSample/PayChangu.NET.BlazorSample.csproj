@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <UserSecretsId>PayChangu.NET.BlazorSample-5f2e3b7a-6a41-4e89-a67c-90f9b5f1c243</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

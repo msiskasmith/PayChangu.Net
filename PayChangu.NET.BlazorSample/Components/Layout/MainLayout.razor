@@ -1,33 +1,45 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <RadzenComponents @rendermode="InteractiveAuto" />
 
 <RadzenLayout>
     <RadzenHeader>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0">
-            <RadzenSidebarToggle Click="@(() => sidebar1Expanded = !sidebar1Expanded)" />
-            <RadzenLabel Text="Header" />
+        <RadzenStack Orientation="Orientation.Horizontal"
+                     AlignItems="AlignItems.Center"
+                     Gap="1rem"
+                     class="rz-px-4">
+            <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
+            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">
+                PayChangu.NET
+            </RadzenText>
+            <RadzenBadge Text="Sample application" BadgeStyle="BadgeStyle.Info" />
         </RadzenStack>
     </RadzenHeader>
-    <RadzenSidebar @bind-Expanded="@sidebar1Expanded">
+
+    <RadzenSidebar @bind-Expanded="sidebarExpanded">
         <RadzenPanelMenu>
-            <RadzenPanelMenuItem Text="Home" Icon="home" />
-            <RadzenPanelMenuItem Text="Users" Icon="account_box" />
+            <RadzenPanelMenuItem Text="Overview" Icon="dashboard" Path="/" />
+            <RadzenPanelMenuItem Text="Payment flows" Icon="payments" Disabled="true" />
+            <RadzenPanelMenuItem Text="Transactions" Icon="receipt_long" Disabled="true" />
+            <RadzenPanelMenuItem Text="Wallet" Icon="account_balance_wallet" Disabled="true" />
+            <RadzenPanelMenuItem Text="Payouts" Icon="send" Disabled="true" />
+            <RadzenPanelMenuItem Text="Webhooks" Icon="webhook" Disabled="true" />
         </RadzenPanelMenu>
-        <div class="rz-p-4">
-            Sidebar
-        </div>
     </RadzenSidebar>
+
     <RadzenBody>
-        <div class="rz-p-4">
-            Body
-        </div>
+        <main class="rz-p-4 rz-p-md-6">
+            @Body
+        </main>
     </RadzenBody>
+
     <RadzenFooter>
-        Footer
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0">
+            PayChangu.NET sample application
+        </RadzenText>
     </RadzenFooter>
 </RadzenLayout>
 
 @code {
-    bool sidebar1Expanded = true;
+    private bool sidebarExpanded = true;
 }
