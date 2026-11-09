@@ -367,7 +367,7 @@ public interface IPayChanguClient
     /// Thrown when the operation is cancelled.
     /// </exception>
     Task<PayChanguApiResponse<GetBalanceResponse>> GetBalanceAsync(
-        string currency = "MWK",
+        PayChanguCurrency currency = PayChanguCurrency.MWK,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -939,19 +939,12 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetBalanceResponse>>
         GetBalanceAsync(
-            string currency = "MWK",
+            PayChanguCurrency currency = PayChanguCurrency.MWK,
             CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(currency))
-        {
-            throw new ArgumentException(
-                "Currency cannot be null or empty.",
-                nameof(currency));
-        }
-
         var endpoint = PayChanguApiEndpoints.Account.GetBalance.Replace(
             "{iso}",
-            Uri.EscapeDataString(currency));
+            Uri.EscapeDataString(currency.ToString()));
 
         return await GetAsync<GetBalanceResponse>(
             endpoint,
@@ -962,18 +955,11 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetSupportedBanksResponse>>
         GetSupportedBanksAsync(
-            string currency,
+            PayChanguCurrency currency = PayChanguCurrency.MWK,
             CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(currency))
-            {
-                throw new ArgumentException(
-                    "Currency cannot be null, empty, or whitespace.",
-                    nameof(currency));
-            }
-
             var endpoint = PayChanguApiEndpoints.Payout.GetBanks
-                .Replace("{iso}", Uri.EscapeDataString(currency));
+                .Replace("{iso}", Uri.EscapeDataString(currency.ToString()));
 
             return await GetAsync<GetSupportedBanksResponse>(
                 endpoint,
