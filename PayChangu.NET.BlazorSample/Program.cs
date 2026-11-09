@@ -81,88 +81,30 @@ app.MapPost("/api/webhooks/paychangu", async (
         return Results.BadRequest();
     }
 
-    string transactionIdentifier;
-
-    try
-    {
-        transactionIdentifier = webhookEvent.TransactionIdentifier;
-    }
-    catch (System.Text.Json.JsonException ex)
-    {
-        logger.LogWarning(
-            ex,
-            "Rejected a signed PayChangu webhook without a usable transaction identifier.");
-
-        return Results.BadRequest();
-    }
-
     bool? paymentVerified = null;
     string? verificationStatus = null;
     string? verificationMessage = null;
 
     if (webhookEvent.PaymentFlow is PayChanguPaymentFlow.Checkout or PayChanguPaymentFlow.DirectCharge)
     {
-        if (webhookEvent.PaymentMethod == PayChanguPaymentMethod.Unknown)
-        {
-            verificationStatus = "Not attempted";
-            verificationMessage = "The payment method could not be determined from the webhook event.";
-
-            logger.LogWarning(
-                "Could not verify PayChangu payment {TransactionIdentifier} because its payment method is unknown.",
-                transactionIdentifier);
-        }
-        else
-        {
-            var payChanguClient = context.RequestServices
+        var payChanguClient = context.RequestServices
                 .GetRequiredService<IPayChanguClient>();
 
-            var verificationResponse = await payChanguClient.Transactions.VerifyAsync(
-                transactionIdentifier,
-                webhookEvent.PaymentFlow,
-                webhookEvent.PaymentMethod,
-                context.RequestAborted);
+        var verificationResponse = await payChanguClient.Transactions.VerifyAsync(
+            webhookEvent.TransactionIdentifier,
+            webhookEvent.PaymentFlow,
+            webhookEvent.PaymentMethod,
+            context.RequestAborted);
 
-            if (!verificationResponse.Success || verificationResponse.Result is null)
-            {
-                logger.LogError(
-                    "PayChangu transaction verification failed for {TransactionIdentifier}. StatusCode: {StatusCode}, Error: {ErrorMessage}",
-                    transactionIdentifier,
-                    verificationResponse.StatusCode,
-                    verificationResponse.ErrorMessage);
-
-                // Return a server error so PayChangu can retry the webhook.
-                return Results.StatusCode(StatusCodes.Status502BadGateway);
-            }
-
-            var verifiedPayment = verificationResponse.Result;
-
-            paymentVerified = verifiedPayment.IsValid(
-                transactionIdentifier,
-                webhookEvent.Currency,
-                webhookEvent.Amount);
-
-            verificationStatus = paymentVerified.Value
-                ? "Verified"
-                : verifiedPayment.Status;
-
-            verificationMessage = paymentVerified.Value
-                ? "The payment was confirmed by the PayChangu verification API."
-                : verifiedPayment.Message;
-
-            if (paymentVerified.Value)
-            {
-                logger.LogInformation(
-                    "PayChangu payment {TransactionIdentifier} was successfully verified.",
-                    transactionIdentifier);
-            }
-            else
-            {
-                logger.LogWarning(
-                    "PayChangu payment {TransactionIdentifier} was verified but is not confirmed as successful. Verification status: {VerificationStatus}",
-                    transactionIdentifier,
-                    verificationStatus);
-            }
+        if (!verificationResponse.Success
+                || verificationResponse.Result is null
+                || !verificationResponse.Result
+                        .IsValid(webhookEvent.TransactionIdentifier, webhookEvent.Currency, webhookEvent.Amount))
+        {
+            // Return a server error so PayChangu can retry the webhook.
+            return Results.StatusCode(StatusCodes.Status502BadGateway);
         }
+
     }
     else if (webhookEvent.PaymentFlow == PayChanguPaymentFlow.Payout)
     {
@@ -183,15 +125,6 @@ app.MapPost("/api/webhooks/paychangu", async (
         paymentVerified,
         verificationStatus,
         verificationMessage);
-
-    logger.LogInformation(
-        "Received PayChangu webhook. EventType: {EventType}, Flow: {PaymentFlow}, Method: {PaymentMethod}, TransactionIdentifier: {TransactionIdentifier}, Status: {Status}, PaymentVerified: {PaymentVerified}",
-        webhookEvent.EventType,
-        webhookEvent.PaymentFlow,
-        webhookEvent.PaymentMethod,
-        transactionIdentifier,
-        webhookEvent.Status,
-        paymentVerified);
 
     return Results.Ok();
 });
