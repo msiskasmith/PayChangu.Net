@@ -1057,7 +1057,7 @@ The repository includes a Blazor Web App sample in `PayChangu.NET.BlazorSample/`
 - Transaction verification and wallet balance retrieval.
 - Webhook signature validation and a local webhook event viewer.
 
-The sample targets .NET 10 and references the SDK project directly, so you can run it from the repository without waiting for a NuGet package release.
+The sample targets .NET 10.
 
 ### Configure the PayChangu secret before starting the sample
 
