@@ -136,8 +136,13 @@ app.MapPost("/api/webhooks/paychangu", async (
 
             var verifiedPayment = verificationResponse.Result;
 
+            var verifiedTransactionIdentifier =
+                webhookEvent.PaymentFlow == PayChanguPaymentFlow.Checkout
+                    ? verifiedPayment.TransactionReference
+                    : verifiedPayment.ChargeId;
+
             var transactionMatches = string.Equals(
-                verifiedPayment.TransactionIdentifier,
+                verifiedTransactionIdentifier,
                 transactionIdentifier,
                 StringComparison.Ordinal);
 
