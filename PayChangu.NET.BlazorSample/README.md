@@ -5,11 +5,13 @@ A Blazor Web App demonstrating the [PayChangu.NET](https://www.nuget.org/package
 ## Requirements
 
 - .NET 10 SDK
-- A PayChangu API secret key
+- A PayChangu API secret key to use the API-backed examples (the application can start without it)
 
 ## Configure the API key
 
-The sample uses .NET User Secrets so the API secret key is kept out of source control.
+The sample uses .NET User Secrets so the API secret key is kept out of source control. The application
+can start without the key, but the API-backed examples remain unavailable until it is configured.
+If the key is missing, the application displays setup instructions across the pages.
 
 From this project directory, run:
 
@@ -39,12 +41,12 @@ Open the local URL shown in the application output.
 ## Notes
 
 - The application uses Blazor Interactive Server rendering. PayChangu API calls and secret-key handling stay on the server.
-- The PayChangu client is registered through `AddPayChangu` and can be injected into components or application services using `IPayChanguClient`.
+- The PayChangu client is registered through `AddPayChangu` when the API secret key is configured. It can then be injected into components or application services using `IPayChanguClient`.
 - The Payment Flows page demonstrates Standard Checkout, Mobile Money Direct Charge, Bank Transfer Direct Charge, and Card Direct Charge with 3-D Secure authentication. The `/card-payment-return` page verifies a card transaction after the customer returns from authentication.
 - The Payouts page demonstrates Mobile Money and bank payout initiation using the supported payout operators and banks.
 - The Transactions page demonstrates payment verification. A successful Direct Charge initiation is not proof of payment; verify the transaction or process its webhook before fulfilling an order.
 - The Webhooks page demonstrates the `POST /api/webhooks/paychangu` endpoint, including signature validation and parsing of Checkout, Direct Charge, and payout events. Accepted event details are kept in a bounded in-memory store (up to 100 events) and remain visible when navigating away from and back to the page. The history is cleared when the application restarts.
-- To receive live PayChangu webhooks during local development, expose the local application through a secure public tunnel and configure that public URL as the webhook endpoint. The endpoint requires the `PayChangu:WebhookSecret` user secret.
+- To receive live PayChangu webhooks during local development, expose the local application through a secure public tunnel and configure that public URL as the webhook endpoint. The endpoint requires both the `PayChangu:SecretKey` and `PayChangu:WebhookSecret` user secrets.
 
 
 ## Card Direct Charge and PCI DSS
