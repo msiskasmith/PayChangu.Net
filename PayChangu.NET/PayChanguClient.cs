@@ -296,7 +296,7 @@ public interface IPayChanguClient
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is cancelled.
     /// </exception>
-    Task<PayChanguApiResponse<GetBankDirectChargeDetailsResponse>>
+    Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
         GetSingleBankTransferDirectChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default);
@@ -802,7 +802,7 @@ internal sealed class PayChanguClient : IPayChanguClient
     }
 
     /// <inheritdoc />
-    public async Task<PayChanguApiResponse<GetBankDirectChargeDetailsResponse>>
+    public async Task<PayChanguApiResponse<GetBankTransferDirectChargeDetailsResponse>>
         GetSingleBankTransferDirectChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default)
@@ -817,7 +817,7 @@ internal sealed class PayChanguClient : IPayChanguClient
             .GetSingleChargeDetails
             .Replace("{id}", Uri.EscapeDataString(chargeId));
 
-        return await GetAsync<GetBankDirectChargeDetailsResponse>(
+        return await GetAsync<GetBankTransferDirectChargeDetailsResponse>(
             endpoint,
             "bank transfer direct charge details retrieval",
             cancellationToken);
