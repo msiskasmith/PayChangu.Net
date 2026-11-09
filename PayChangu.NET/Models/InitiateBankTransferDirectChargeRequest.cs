@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+
+
 namespace PayChangu.NET.Models;
 
 /// <summary>
@@ -18,7 +20,8 @@ public sealed class InitiateBankTransferDirectChargeRequest
     /// Gets or sets the currency used for the payment.
     /// </summary>
     [JsonPropertyName("currency")]
-    public string Currency { get; set; } = "MWK";
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public PayChanguCurrency Currency { get; set; } = PayChanguCurrency.MWK;
 
     /// <summary>
     /// Gets or sets the payment method.
