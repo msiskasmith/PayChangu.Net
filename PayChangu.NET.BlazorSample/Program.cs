@@ -17,18 +17,14 @@ builder.Services.AddSingleton<WebhookEventStore>();
 
 var secretKey = builder.Configuration["PayChangu:SecretKey"];
 
-if (string.IsNullOrWhiteSpace(secretKey))
+if (!string.IsNullOrWhiteSpace(secretKey))
 {
-    throw new InvalidOperationException(
-        "PayChangu:SecretKey is missing. Configure it using .NET User Secrets. " +
-        "Run: dotnet user-secrets set \"PayChangu:SecretKey\" \"<your-secret-key>\"");
+    builder.Services.AddPayChangu(options =>
+    {
+        options.SecretKey = secretKey;
+        options.WebhookSecret = builder.Configuration["PayChangu:WebhookSecret"];
+    });
 }
-
-builder.Services.AddPayChangu(options =>
-{
-    options.SecretKey = secretKey;
-    options.WebhookSecret = builder.Configuration["PayChangu:WebhookSecret"];
-});
 
 var app = builder.Build();
 
@@ -49,11 +45,11 @@ app.MapPost("/api/webhooks/paychangu", async (
     ILogger<Program> logger,
     WebhookEventStore eventStore) =>
 {
-    if (string.IsNullOrWhiteSpace(
-        app.Configuration["PayChangu:WebhookSecret"]))
+    if (string.IsNullOrWhiteSpace(app.Configuration["PayChangu:SecretKey"]) ||
+        string.IsNullOrWhiteSpace(app.Configuration["PayChangu:WebhookSecret"]))
     {
         return Results.Problem(
-            "Configure PayChangu:WebhookSecret to enable webhook validation.",
+            "Configure both PayChangu:SecretKey and PayChangu:WebhookSecret to enable webhook validation.",
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
