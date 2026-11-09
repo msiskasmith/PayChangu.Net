@@ -297,7 +297,7 @@ public interface IPayChanguClient
     /// Thrown when the operation is cancelled.
     /// </exception>
     Task<PayChanguApiResponse<GetBankDirectChargeDetailsResponse>>
-        GetSingleBankDirectChargeDetailsAsync(
+        GetSingleBankTransferDirectChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default);
 
@@ -803,7 +803,7 @@ internal sealed class PayChanguClient : IPayChanguClient
 
     /// <inheritdoc />
     public async Task<PayChanguApiResponse<GetBankDirectChargeDetailsResponse>>
-        GetSingleBankDirectChargeDetailsAsync(
+        GetSingleBankTransferDirectChargeDetailsAsync(
             string chargeId,
             CancellationToken cancellationToken = default)
     {
