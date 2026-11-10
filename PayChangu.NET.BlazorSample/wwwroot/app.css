@@ -206,3 +206,47 @@ a:hover, .btn-link:hover {
         border-radius: 14px;
     }
 }
+
+
+/* Overview cards */
+.sample-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+    gap: 1rem;
+}
+
+.sample-feature-card {
+    height: 100%;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.sample-feature-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--rz-primary) 35%, var(--sample-border));
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.sample-feature-card .rz-icon {
+    display: inline-flex;
+    width: 2.8rem;
+    height: 2.8rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--rz-primary) 10%, white);
+}
+
+.sample-feature-card .rz-text {
+    font-weight: 650;
+}
+
+.sample-feature-card a {
+    display: block;
+    padding-block: 0.1rem;
+    font-size: 0.9rem;
+}
+
+.sample-brand-icon {
+    color: var(--rz-primary);
+    font-size: 1.5rem;
+}
