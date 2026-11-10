@@ -8,7 +8,7 @@
     <div>
         <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Direct Card Charge</RadzenText>
         <RadzenText TextStyle="TextStyle.Body1">
-            Initiate a card charge, complete the bank's 3-D Secure authentication, and submit a refund request when needed.
+            Initiate a card charge and complete the bank's 3-D Secure authentication.
         </RadzenText>
     </div>
 
@@ -84,15 +84,7 @@
                 <RadzenText TextStyle="TextStyle.Caption">
                     After authentication, PayChangu returns the customer to the configured return URL. The return page verifies the transaction with PayChangu.
                 </RadzenText>
-                <RadzenButton Text="Refund card charge" Icon="undo" ButtonStyle="ButtonStyle.Danger"
-                              Click="@RefundCardChargeAsync" Disabled="@isLoadingRefund" />
-                @if (isLoadingRefund)
-                {
-                    <RadzenText TextStyle="TextStyle.Body2">Submitting refund request...</RadzenText>
-                }
-                @if (!string.IsNullOrWhiteSpace(refundMessage))
-                {
-                    <RadzenAlert AlertStyle="@(refundSucceeded ? AlertStyle.Success : AlertStyle.Warning)">@refundMessage</RadzenAlert>
+                <a href="/direct-charge/card/refund?charge_id=@chargeId">Open Refund Card Charge</a>
                 }
             </RadzenStack>
         </RadzenCard>
@@ -142,10 +134,7 @@
     private string? chargeId;
     private string? cardAuthenticationUrl;
     private string? errorMessage;
-    private string? refundMessage;
-    private bool refundSucceeded;
     private bool isLoading;
-    private bool isLoadingRefund;
 
     protected override void OnInitialized()
     {
@@ -161,7 +150,6 @@
     private async Task InitiateCardDirectChargeAsync()
     {
         errorMessage = null;
-        refundMessage = null;
         chargeId = null;
         cardAuthenticationUrl = null;
 
@@ -227,28 +215,7 @@
         }
     }
 
-    private async Task RefundCardChargeAsync()
-    {
-        refundMessage = null;
-        isLoadingRefund = true;
-        try
-        {
-            var response = await payChanguClient.DirectCharges.Card.RefundAsync(chargeId!);
-            refundSucceeded = response.Success;
-            refundMessage = response.Success
-                ? "The card refund request was accepted by PayChangu."
-                : response.ErrorMessage ?? "PayChangu could not process the card refund request.";
-        }
-        catch (HttpRequestException ex)
-        {
-            refundSucceeded = false;
-            refundMessage = $"Unable to submit the refund request: {ex.Message}";
-        }
-        finally
-        {
-            isLoadingRefund = false;
-        }
-    }
+
 
     private sealed record TestCard(string Label, string CardNumber);
 }
