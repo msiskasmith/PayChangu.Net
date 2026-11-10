@@ -8,7 +8,7 @@
     <div>
         <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Direct Charge — Bank Transfer</RadzenText>
         <RadzenText TextStyle="TextStyle.Body1">
-            Initiate a bank transfer charge and retrieve the transaction details and payment instructions.
+            Initiate a bank transfer charge and display the returned payment instructions.
         </RadzenText>
     </div>
 
@@ -77,19 +77,7 @@
                 <RadzenText TextStyle="TextStyle.Body2">@paymentStatus</RadzenText>
                 <RadzenText TextStyle="TextStyle.Subtitle2">Payment instructions</RadzenText>
                 <RadzenText TextStyle="TextStyle.Body2">@paymentInstructions</RadzenText>
-                <RadzenButton Text="Get charge details" Icon="search" Click="@GetChargeDetailsAsync" Disabled="@isLoadingDetails" />
-                @if (isLoadingDetails)
-                {
-                    <RadzenText TextStyle="TextStyle.Body2">Retrieving charge details...</RadzenText>
-                }
-                @if (!string.IsNullOrWhiteSpace(detailsMessage))
-                {
-                    <RadzenAlert AlertStyle="@(detailsSucceeded ? AlertStyle.Success : AlertStyle.Warning)">@detailsMessage</RadzenAlert>
-                }
-                @if (!string.IsNullOrWhiteSpace(chargeDetails))
-                {
-                    <RadzenText TextStyle="TextStyle.Body2" Style="white-space: pre-line">@chargeDetails</RadzenText>
-                }
+                <a href="/direct-charge/bank-transfer/details?charge_id=@chargeId">Open Single Transaction</a>
                 <a href="/verify-transactions">Open Verify Transactions</a>
             </RadzenStack>
         </RadzenCard>
@@ -113,11 +101,7 @@
     private string? paymentStatus;
     private string? paymentInstructions;
     private string? errorMessage;
-    private string? detailsMessage;
-    private string? chargeDetails;
-    private bool detailsSucceeded;
     private bool isLoading;
-    private bool isLoadingDetails;
 
     protected override void OnInitialized()
     {
@@ -139,8 +123,6 @@
         providerReference = null;
         paymentStatus = null;
         paymentInstructions = null;
-        detailsMessage = null;
-        chargeDetails = null;
 
         if (amount <= 0)
         {
@@ -195,38 +177,5 @@
         }
     }
 
-    private async Task GetChargeDetailsAsync()
-    {
-        detailsMessage = null;
-        chargeDetails = null;
-        isLoadingDetails = true;
-        try
-        {
-            var response = await payChanguClient.DirectCharges.BankTransfer.GetDetailsAsync(chargeId!);
-            if (!response.Success || response.Result?.Data?.Transaction is not { } data)
-            {
-                detailsSucceeded = false;
-                detailsMessage = response.ErrorMessage ?? "Unable to retrieve bank transfer charge details.";
-                return;
-            }
 
-            detailsSucceeded = true;
-            detailsMessage = "Charge details retrieved successfully.";
-            chargeDetails = $"Charge ID: {data.ChargeId}\n" +
-                            $"Reference: {data.ReferenceId}\n" +
-                            $"Status: {data.Status}\n" +
-                            $"Amount: {data.Currency} {data.Amount:N2}\n" +
-                            $"Created: {data.CreatedAt:g}\n" +
-                            $"Completed: {data.CompletedAt?.ToString("g") ?? "Not completed"}";
-        }
-        catch (HttpRequestException ex)
-        {
-            detailsSucceeded = false;
-            detailsMessage = $"Unable to retrieve charge details: {ex.Message}";
-        }
-        finally
-        {
-            isLoadingDetails = false;
-        }
-    }
 }
