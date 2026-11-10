@@ -84,7 +84,18 @@ else
             // Yield once so the loading skeleton can render before the store lookup completes.
             await Task.Yield();
 
-            webhookEvent = EventStore.GetEvent(EventId.Value)?.WebhookEvent;
+            // The webhook may arrive before its event has been added to the in-memory store.
+            // Retry three times, waiting two seconds between attempts (up to six seconds).
+            for (var attempt = 0; attempt <= 3; attempt++)
+            {
+                webhookEvent = EventStore.GetEvent(EventId.Value)?.WebhookEvent;
+
+                if (webhookEvent is not null || attempt == 3)
+                    break;
+
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+
             isLoading = false;
         }
         else
