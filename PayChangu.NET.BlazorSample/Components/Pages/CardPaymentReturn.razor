@@ -19,7 +19,7 @@
     @if (string.IsNullOrWhiteSpace(ChargeId))
     {
         <RadzenAlert AlertStyle="AlertStyle.Warning">
-            No charge identifier was provided. Return to Payment Flows and initiate a card payment.
+            No charge identifier was provided. Return to Card Direct Charge and initiate a card payment.
         </RadzenAlert>
     }
     else if (isLoading)
@@ -55,7 +55,7 @@
         </RadzenCard>
     }
 
-    <a href="/payment-flows">Return to Payment Flows</a>
+    <a href="/direct-charge/card">Return to Payment Flows</a>
 </RadzenStack>
 
 @code {

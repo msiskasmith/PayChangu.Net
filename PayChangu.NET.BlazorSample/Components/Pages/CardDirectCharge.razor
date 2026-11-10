@@ -1,0 +1,220 @@
+@using Bogus
+
+@page "/direct-charge/card"
+
+<PageTitle>Card Direct Charge | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Direct Card Charge</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Initiate a card charge and complete the bank's 3-D Secure authentication.
+        </RadzenText>
+    </div>
+
+    <RadzenAlert AlertStyle="AlertStyle.Warning">
+        <strong>PCI DSS requirement:</strong> PayChangu requires your business to be PCI DSS compliant before processing direct card charges.
+        PayChangu must also activate Card Direct Charge on your account. Do not use this form for real card details unless your environment meets those requirements.
+    </RadzenAlert>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Amount</RadzenText>
+                    <RadzenNumeric TValue="decimal" @bind-Value="amount" Min="1" Format="N2" Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Currency</RadzenText>
+                    <RadzenDropDown TValue="PayChanguCurrency" Data="@currencies" @bind-Value="currency" Style="width: 100%" />
+                </RadzenColumn>
+            </RadzenRow>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <RadzenText TextStyle="TextStyle.Subtitle2">Customer details</RadzenText>
+                <RadzenButton Text="Refresh details" Icon="refresh" Size="ButtonSize.Small" Click="@GenerateTestDetails" />
+            </div>
+            <RadzenText TextStyle="TextStyle.Caption">Generated values are editable. Refresh to generate another set.</RadzenText>
+            <RadzenTextBox @bind-Value="email" Placeholder="Email address (optional)" Style="width: 100%" />
+
+            <RadzenText TextStyle="TextStyle.Subtitle2">PayChangu sandbox test cards</RadzenText>
+            <RadzenDropDown TValue="string" Data="@testCards" TextProperty="Label" ValueProperty="CardNumber"
+                            @bind-Value="selectedTestCardNumber" Placeholder="Select a test card to autofill" Style="width: 100%" />
+            <RadzenText TextStyle="TextStyle.Caption">
+                These test cards only work with PayChangu test API keys. All use expiry 12/30 and CVV 123.
+                The 3-D Secure OTP is 1234. Do not use test card details with live credentials.
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Card details</RadzenText>
+            <RadzenTextBox @bind-Value="cardholderName" Placeholder="Name on card" Style="width: 100%" />
+            <RadzenTextBox @bind-Value="cardNumber" Placeholder="Card number" Style="width: 100%" />
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="6">
+                    <RadzenTextBox @bind-Value="cardExpiry" Placeholder="Expiry (MM/YY)" Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="6">
+                    <RadzenTextBox @bind-Value="cardCvv" Type="password" Placeholder="CVV" Style="width: 100%" />
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenText TextStyle="TextStyle.Subtitle2">3-D Secure return URL</RadzenText>
+            <RadzenTextBox @bind-Value="cardRedirectUrl" Placeholder="Public URL ending in /card-payment-return" Style="width: 100%" />
+            <RadzenText TextStyle="TextStyle.Caption">This URL must be publicly accessible over HTTPS. For local testing, use your tunnel URL.</RadzenText>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger">@errorMessage</RadzenAlert>
+            }
+            <RadzenButton Text="Charge card" Icon="credit_card" Click="@InitiateCardDirectChargeAsync" Disabled="@isLoading" />
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (isLoading)
+    {
+        <RadzenCard><RadzenText TextStyle="TextStyle.Body2">Sending card charge request to PayChangu...</RadzenText></RadzenCard>
+    }
+    else if (!string.IsNullOrWhiteSpace(cardAuthenticationUrl))
+    {
+        <RadzenCard>
+            <RadzenStack Gap="0.75rem">
+                <RadzenAlert AlertStyle="AlertStyle.Info">
+                    Card charge initiated. The customer must complete 3-D Secure authentication before the payment can be verified.
+                </RadzenAlert>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">@chargeId</RadzenText>
+                <a href="@cardAuthenticationUrl">Continue to 3-D Secure authentication</a>
+                <RadzenText TextStyle="TextStyle.Caption">
+                    After authentication, PayChangu returns the customer to the configured return URL. The return page verifies the transaction with PayChangu.
+                </RadzenText>
+                <a href="/direct-charge/card/refund?charge_id=@chargeId">Open Refund Card Charge</a>
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+
+    private readonly Faker faker = new();
+    private readonly PayChanguCurrency[] currencies = Enum.GetValues<PayChanguCurrency>();
+    private readonly TestCard[] testCards =
+    [
+        new("Visa — 3DS Success", "4242424242424242"),
+        new("Visa — 3DS Timeout", "4000000000003220"),
+        new("Visa — 3DS Insufficient", "4000000000009995"),
+        new("Visa — 3DS Declined", "4000000000000002"),
+        new("Mastercard — 3DS Success", "5555555555554444"),
+        new("Mastercard — 3DS Error", "5200000000000008")
+    ];
+
+    private PayChanguCurrency currency = PayChanguCurrency.MWK;
+    private decimal amount = 5000m;
+    private string email = string.Empty;
+    private string cardholderName = string.Empty;
+    private string cardNumber = string.Empty;
+    private string cardExpiry = string.Empty;
+    private string cardCvv = string.Empty;
+    private string cardRedirectUrl = string.Empty;
+    private string? _selectedTestCardNumber;
+    private string? selectedTestCardNumber
+    {
+        get => _selectedTestCardNumber;
+        set
+        {
+            _selectedTestCardNumber = value;
+            var testCard = testCards.FirstOrDefault(card => card.CardNumber == value);
+            if (testCard is not null)
+            {
+                cardNumber = testCard.CardNumber;
+                cardExpiry = "12/30";
+                cardCvv = "123";
+                cardholderName = faker.Name.FullName();
+            }
+        }
+    }
+    private string? chargeId;
+    private string? cardAuthenticationUrl;
+    private string? errorMessage;
+    private bool isLoading;
+
+    protected override void OnInitialized()
+    {
+        GenerateTestDetails();
+    }
+
+    private void GenerateTestDetails()
+    {
+        email = faker.Internet.Email();
+        cardholderName = faker.Name.FullName();
+    }
+
+    private async Task InitiateCardDirectChargeAsync()
+    {
+        errorMessage = null;
+        chargeId = null;
+        cardAuthenticationUrl = null;
+
+        if (amount <= 0)
+        {
+            errorMessage = "Enter an amount greater than zero.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(cardholderName) ||
+            string.IsNullOrWhiteSpace(cardNumber) ||
+            string.IsNullOrWhiteSpace(cardExpiry) ||
+            string.IsNullOrWhiteSpace(cardCvv) ||
+            string.IsNullOrWhiteSpace(cardRedirectUrl))
+        {
+            errorMessage = "Complete all card details and provide a 3-D Secure return URL.";
+            return;
+        }
+
+        isLoading = true;
+        var id = Guid.NewGuid().ToString();
+        try
+        {
+            var response = await payChanguClient.DirectCharges.Card.InitiateAsync(
+                new InitiateCardDirectChargeRequest
+                {
+                    CardNumber = cardNumber.Trim(),
+                    Expiry = cardExpiry.Trim(),
+                    Cvv = cardCvv.Trim(),
+                    CardholderName = cardholderName.Trim(),
+                    Amount = amount,
+                    Currency = currency,
+                    ChargeId = id,
+                    RedirectUrl = cardRedirectUrl.Trim(),
+                    Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim()
+                });
+
+            if (!response.Success || response.Result is not { Success: true } data)
+            {
+                errorMessage = response.ErrorMessage ?? "PayChangu could not initiate the Card Direct Charge.";
+                return;
+            }
+
+            chargeId = id;
+            if (!data.Requires3DSAuth || string.IsNullOrWhiteSpace(data.ThreeDSAuthLink))
+            {
+                errorMessage = "PayChangu did not return the expected 3-D Secure authentication link.";
+                chargeId = null;
+                return;
+            }
+
+            cardAuthenticationUrl = data.ThreeDSAuthLink;
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to PayChangu: {ex.Message}";
+        }
+        finally
+        {
+            cardNumber = string.Empty;
+            cardExpiry = string.Empty;
+            cardCvv = string.Empty;
+            isLoading = false;
+        }
+    }
+
+
+
+    private sealed record TestCard(string Label, string CardNumber);
+}

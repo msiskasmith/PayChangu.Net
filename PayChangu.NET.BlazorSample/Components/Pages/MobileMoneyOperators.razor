@@ -1,0 +1,71 @@
+@page "/direct-charge/mobile-money/operators"
+
+<PageTitle>Mobile Money Operators | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Mobile Money Operators</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">Retrieve the Mobile Money operators supported by PayChangu.</RadzenText>
+    </div>
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
+            <RadzenButton Text="Get operators" Icon="refresh" Click="@LoadOperatorsAsync" Disabled="@isLoading" />
+            @if (isLoading)
+            {
+                <RadzenText>Loading supported operators...</RadzenText>
+            }
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <RadzenAlert AlertStyle="@(succeeded ? AlertStyle.Success : AlertStyle.Warning)">@message</RadzenAlert>
+            }
+            @foreach (var op in operators)
+            {
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenStack Gap="0.25rem">
+                        <RadzenText TextStyle="TextStyle.Subtitle2">@op.Name</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption">Reference ID: @op.RefId</RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            }
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+    private readonly List<SupportedMobileMoneyOperator> operators = [];
+    private bool isLoading;
+    private bool succeeded;
+    private string? message;
+
+    protected override Task OnInitializedAsync() => LoadOperatorsAsync();
+
+    private async Task LoadOperatorsAsync()
+    {
+        isLoading = true;
+        message = null;
+        operators.Clear();
+        try
+        {
+            var response = await payChanguClient.ReferenceData.MobileMoneyOperators.GetAllAsync();
+            if (!response.Success || response.Result?.Data is not { } data)
+            {
+                succeeded = false;
+                message = response.ErrorMessage ?? "Unable to retrieve Mobile Money operators.";
+                return;
+            }
+            operators.AddRange(data);
+            succeeded = true;
+            message = $"{operators.Count} operator(s) retrieved.";
+        }
+        catch (HttpRequestException ex)
+        {
+            succeeded = false;
+            message = $"Unable to retrieve Mobile Money operators: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
