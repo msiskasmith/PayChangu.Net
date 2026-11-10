@@ -27,6 +27,7 @@
             </RadzenRow>
 
             <RadzenText TextStyle="TextStyle.Subtitle2">Mobile Money operator</RadzenText>
+            <a href="/payouts/operators">View payout operators</a>
             <RadzenDropDown TValue="string" Data="@mobileMoneyOperators" TextProperty="Name" ValueProperty="RefId"
                             @bind-Value="selectedOperatorRefId" Change="@OnOperatorChanged"
                             Placeholder="Select an operator" Disabled="@isLoadingReferenceData" Style="width: 100%" />
