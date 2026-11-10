@@ -67,69 +67,52 @@
                 @foreach (var webhookEvent in events)
                 {
                     <RadzenCard Variant="Variant.Outlined">
-                        <RadzenStack Gap="0.5rem">
+                        <RadzenStack Gap="0.75rem">
                             <RadzenStack Orientation="Orientation.Horizontal"
                                          AlignItems="AlignItems.Center"
                                          JustifyContent="JustifyContent.SpaceBetween">
-                                <RadzenText TextStyle="TextStyle.Subtitle1">
-                                    @webhookEvent.EventType
-                                </RadzenText>
+                                <RadzenStack Gap="0.15rem">
+                                    <RadzenText TextStyle="TextStyle.Subtitle1">
+                                        @webhookEvent.EventType
+                                    </RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                        Received @webhookEvent.ReceivedAt.ToLocalTime().ToString("g")
+                                    </RadzenText>
+                                </RadzenStack>
                                 <RadzenBadge Text="@webhookEvent.Status"
                                              BadgeStyle="@(string.Equals(webhookEvent.Status, "success", StringComparison.OrdinalIgnoreCase)
                                                  ? BadgeStyle.Success
                                                  : BadgeStyle.Warning)" />
                             </RadzenStack>
 
-                            <RadzenRow Gap="0.5rem">
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Transaction identifier</RadzenText>
-                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.TransactionIdentifier</RadzenText>
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Amount</RadzenText>
-                                    <RadzenText TextStyle="TextStyle.Body2">
-                                        @webhookEvent.Currency @webhookEvent.Amount.ToString("N2")
-                                    </RadzenText>
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Payment flow</RadzenText>
-                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.PaymentFlow</RadzenText>
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Payment method</RadzenText>
-                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.PaymentMethod</RadzenText>
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Payment verification</RadzenText>
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         AlignItems="AlignItems.Center"
+                                         Gap="0.5rem">
+                                <RadzenText TextStyle="TextStyle.Caption">Payment verification:</RadzenText>
+                                @if (webhookEvent.PaymentVerified == true)
+                                {
+                                    <RadzenBadge Text="Confirmed" BadgeStyle="BadgeStyle.Success" />
+                                }
+                                else if (webhookEvent.PaymentVerified == false)
+                                {
+                                    <RadzenBadge Text="Not confirmed" BadgeStyle="BadgeStyle.Warning" />
+                                }
+                                else
+                                {
                                     <RadzenText TextStyle="TextStyle.Body2">
                                         @webhookEvent.VerificationStatus
-                                        @if (webhookEvent.PaymentVerified == true)
-                                        {
-                                            <RadzenBadge Text="Confirmed" BadgeStyle="BadgeStyle.Success" />
-                                        }
-                                        else if (webhookEvent.PaymentVerified == false)
-                                        {
-                                            <RadzenBadge Text="Not confirmed" BadgeStyle="BadgeStyle.Warning" />
-                                        }
                                     </RadzenText>
-                                    @if (!string.IsNullOrWhiteSpace(webhookEvent.VerificationMessage))
-                                    {
-                                        <RadzenText TextStyle="TextStyle.Caption">
-                                            @webhookEvent.VerificationMessage
-                                        </RadzenText>
-                                    }
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Environment</RadzenText>
-                                    <RadzenText TextStyle="TextStyle.Body2">@webhookEvent.Mode</RadzenText>
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="6">
-                                    <RadzenText TextStyle="TextStyle.Caption">Received</RadzenText>
-                                    <RadzenText TextStyle="TextStyle.Body2">
-                                        @webhookEvent.ReceivedAt.ToLocalTime().ToString("g")
-                                    </RadzenText>
-                                </RadzenColumn>
-                            </RadzenRow>
+                                }
+                            </RadzenStack>
+
+                            @if (!string.IsNullOrWhiteSpace(webhookEvent.VerificationMessage))
+                            {
+                                <RadzenText TextStyle="TextStyle.Caption">
+                                    @webhookEvent.VerificationMessage
+                                </RadzenText>
+                            }
+
+                            <WebhookEventDetails EventId="@webhookEvent.Id" />
                         </RadzenStack>
                     </RadzenCard>
                 }
