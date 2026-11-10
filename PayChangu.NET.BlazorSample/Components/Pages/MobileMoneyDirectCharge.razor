@@ -24,6 +24,7 @@
                     <RadzenDropDown TValue="string" Data="@mobileMoneyOperators" TextProperty="Name" ValueProperty="RefId"
                                     @bind-Value="selectedOperatorRefId" Change="@OnOperatorChanged"
                                     Placeholder="Select an operator" Disabled="@isLoadingOperators" Style="width: 100%" />
+                    <a href="/direct-charge/mobile-money/operators">View supported operators</a>
                     @if (isLoadingOperators)
                     {
                         <RadzenText TextStyle="TextStyle.Caption">Loading supported operators...</RadzenText>
