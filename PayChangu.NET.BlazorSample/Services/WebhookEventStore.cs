@@ -36,12 +36,23 @@ public sealed class WebhookEventStore
             webhookEvent.Mode,
             paymentVerified,
             verificationStatus,
-            verificationMessage));
+            verificationMessage)
+        {
+            WebhookEvent = webhookEvent
+        });
 
         while (_events.Count > MaximumEventCount)
         {
             _events.TryDequeue(out _);
         }
+    }
+
+    /// <summary>
+    /// Gets a stored webhook event by its sample application identifier.
+    /// </summary>
+    public WebhookEventLogEntry? GetEvent(Guid id)
+    {
+        return _events.FirstOrDefault(webhookEvent => webhookEvent.Id == id);
     }
 
     /// <summary>
@@ -80,4 +91,15 @@ public sealed record WebhookEventLogEntry(
     string Mode,
     bool? PaymentVerified,
     string? VerificationStatus,
-    string? VerificationMessage);
+    string? VerificationMessage)
+{
+    /// <summary>
+    /// Gets the unique identifier assigned by the sample application.
+    /// </summary>
+    public Guid Id { get; init; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Gets the original webhook event payload.
+    /// </summary>
+    public PayChanguWebhookEvent WebhookEvent { get; init; } = null!;
+}
