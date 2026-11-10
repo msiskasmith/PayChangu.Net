@@ -148,7 +148,7 @@ else
             {
                 result.Add(new WebhookProperty(propertyName, FormatValue(value)));
             }
-            else if (value is IEnumerable collection and not string)
+            else if (value is IEnumerable collection && value is not string)
             {
                 var index = 0;
 
