@@ -27,6 +27,7 @@
             </RadzenRow>
 
             <RadzenText TextStyle="TextStyle.Subtitle2">Bank or payout provider</RadzenText>
+            <a href="/payouts/banks">View supported banks</a>
             <RadzenDropDown TValue="Guid" Data="@supportedBanks" TextProperty="Name" ValueProperty="Id"
                             @bind-Value="selectedBankId" Placeholder="Select a bank or provider"
                             Disabled="@isLoadingReferenceData" Style="width: 100%" />
@@ -85,8 +86,7 @@
                 <RadzenText TextStyle="TextStyle.Body2">@transactionStatus</RadzenText>
                 <RadzenText TextStyle="TextStyle.Subtitle2">Recipient account</RadzenText>
                 <RadzenText TextStyle="TextStyle.Body2">@accountDetails</RadzenText>
-<a href="/payouts/banks">Open Get Banks</a>
-                <a href="/payouts/bank/details?charge_id=@chargeId">Open Single Bank Payout Details</a>
+<a href="/payouts/bank/details?charge_id=@chargeId">Open Single Bank Payout Details</a>
                 <a href="/payouts/bank/all">Open All Bank Payout Details</a>
                 <a href="/verify-transactions">Open Verify Transactions</a>
             </RadzenStack>
