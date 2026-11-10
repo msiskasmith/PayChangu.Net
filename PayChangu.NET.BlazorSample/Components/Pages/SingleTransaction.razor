@@ -1,0 +1,87 @@
+@page "/direct-charge/bank-transfer/details"
+
+<PageTitle>Single Transaction | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Single Transaction</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">Retrieve a Bank Transfer Direct Charge transaction using its charge identifier.</RadzenText>
+    </div>
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+            <RadzenTextBox @bind-Value="chargeId" Placeholder="Enter charge ID" Style="width: 100%" />
+            <RadzenButton Text="Get transaction" Icon="search" Click="@GetDetailsAsync" Disabled="@isLoading" />
+            @if (isLoading)
+            {
+                <RadzenText>Retrieving transaction...</RadzenText>
+            }
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <RadzenAlert AlertStyle="@(succeeded ? AlertStyle.Success : AlertStyle.Warning)">@message</RadzenAlert>
+            }
+            @if (!string.IsNullOrWhiteSpace(details))
+            {
+                <RadzenText Style="white-space: pre-line">@details</RadzenText>
+            }
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+    [SupplyParameterFromQuery(Name = "charge_id")]
+    public string? ChargeId { get; set; }
+    private string chargeId = string.Empty;
+    private string? details;
+    private string? message;
+    private bool succeeded;
+    private bool isLoading;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ChargeId)) chargeId = ChargeId;
+    }
+
+    private async Task GetDetailsAsync()
+    {
+        message = null;
+        details = null;
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            succeeded = false;
+            message = "Enter a charge identifier.";
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var response = await payChanguClient.DirectCharges.BankTransfer.GetDetailsAsync(chargeId.Trim());
+            if (!response.Success || response.Result?.Data?.Transaction is not { } data)
+            {
+                succeeded = false;
+                message = response.ErrorMessage ?? "Unable to retrieve bank transfer transaction details.";
+                return;
+            }
+
+            succeeded = true;
+            message = "Transaction details retrieved successfully.";
+            details = $"Charge ID: {data.ChargeId}\n" +
+                      $"Reference: {data.ReferenceId}\n" +
+                      $"Status: {data.Status}\n" +
+                      $"Amount: {data.Currency} {data.Amount:N2}\n" +
+                      $"Created: {data.CreatedAt:g}\n" +
+                      $"Completed: {data.CompletedAt?.ToString("g") ?? "Not completed"}";
+        }
+        catch (HttpRequestException ex)
+        {
+            succeeded = false;
+            message = $"Unable to retrieve transaction details: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
