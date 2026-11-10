@@ -42,9 +42,11 @@ Open the local URL shown in the application output.
 
 - The application uses Blazor Interactive Server rendering. PayChangu API calls and secret-key handling stay on the server.
 - The PayChangu client is registered through `AddPayChangu` when the API secret key is configured. It can then be injected into components or application services using `IPayChanguClient`.
-- The Payment Flows page demonstrates Standard Checkout, Mobile Money Direct Charge, Bank Transfer Direct Charge, and Card Direct Charge with 3-D Secure authentication. The `/card-payment-return` page verifies a card transaction after the customer returns from authentication.
-- The Payouts page demonstrates Mobile Money and bank payout initiation using the supported payout operators and banks.
-- The Transactions page demonstrates payment verification. A successful Direct Charge initiation is not proof of payment; verify the transaction or process its webhook before fulfilling an order.
+- The Hosted Standard Checkout page demonstrates creation of a hosted checkout session.
+- The Direct Charge pages are separated by payment method: Mobile Money, Bank Transfer, and Card. They demonstrate the currently implemented initiation and detail/refund operations. The `/card-payment-return` route verifies a card transaction after the customer returns from 3-D Secure authentication.
+- The Verify Transactions page is shared by all payment flows; there are no separate verification pages for individual business units. A successful Direct Charge initiation is not proof of payment; verify the transaction or process its webhook before fulfilling an order.
+- Payouts are separated into Mobile Money Payout and Bank Payout pages. The Mobile Money page demonstrates supported withdrawal operators and payout initiation. The Bank page demonstrates supported bank lookup, payout initiation, individual payout details, and the current page of bank payout transactions.
+- The Balance page demonstrates wallet balance retrieval.
 - The Webhooks page demonstrates the `POST /api/webhooks/paychangu` endpoint, including signature validation and parsing of Checkout, Direct Charge, and payout events. Accepted event details are kept in a bounded in-memory store (up to 100 events) and remain visible when navigating away from and back to the page. The history is cleared when the application restarts.
 - To receive live PayChangu webhooks during local development, expose the local application through a secure public tunnel and configure that public URL as the webhook endpoint. The endpoint requires both the `PayChangu:SecretKey` and `PayChangu:WebhookSecret` user secrets.
 
