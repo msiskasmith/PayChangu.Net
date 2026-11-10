@@ -28,55 +28,73 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
                 <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
                     <RadzenStack Gap="0.75rem">
-                        <RadzenIcon Icon="payments" Style="font-size: 2rem; color: var(--rz-primary);" />
-                        <RadzenText TextStyle="TextStyle.H6">Payment Flows</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Body2">
-                            Try Standard Checkout, Mobile Money, Bank Transfer, and Card Direct Charge with 3-D Secure.
-                        </RadzenText>
-                        <a href="/payment-flows">Explore payment flows →</a>
+                        <RadzenIcon Icon="shopping_cart" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Hosted Standard Checkout</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Create a hosted checkout session and redirect customers to PayChangu.</RadzenText>
+                        <a href="/standard-checkout">Initiate a transaction →</a>
                     </RadzenStack>
                 </RadzenCard>
-
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="phone_android" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Mobile Money Direct Charge</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Load supported operators, request a wallet payment, and retrieve charge details.</RadzenText>
+                        <a href="/direct-charge/mobile-money">Explore Mobile Money →</a>
+                    </RadzenStack>
+                </RadzenCard>
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="account_balance" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Bank Transfer Direct Charge</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Initiate a bank transfer charge and retrieve its transaction details.</RadzenText>
+                        <a href="/direct-charge/bank-transfer">Explore bank transfer →</a>
+                    </RadzenStack>
+                </RadzenCard>
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="credit_card" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Direct Card Charge</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Test card charging, 3-D Secure authentication, and card refunds.</RadzenText>
+                        <a href="/direct-charge/card">Explore card payments →</a>
+                    </RadzenStack>
+                </RadzenCard>
                 <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
                     <RadzenStack Gap="0.75rem">
                         <RadzenIcon Icon="receipt_long" Style="font-size: 2rem; color: var(--rz-primary);" />
-                        <RadzenText TextStyle="TextStyle.H6">Transactions</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Body2">
-                            Verify Checkout and Direct Charge transactions and inspect their returned details.
-                        </RadzenText>
-                        <a href="/transactions">Explore transactions →</a>
+                        <RadzenText TextStyle="TextStyle.H6">Verify Transactions</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Verify transactions across Checkout and Direct Charge payment flows.</RadzenText>
+                        <a href="/verify-transactions">Verify a transaction →</a>
                     </RadzenStack>
                 </RadzenCard>
-
                 <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
                     <RadzenStack Gap="0.75rem">
                         <RadzenIcon Icon="account_balance_wallet" Style="font-size: 2rem; color: var(--rz-primary);" />
                         <RadzenText TextStyle="TextStyle.H6">Wallet Balance</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Body2">
-                            Retrieve your PayChangu wallet balances and view amounts by currency.
-                        </RadzenText>
-                        <a href="/wallet">View wallet balances →</a>
+                        <RadzenText TextStyle="TextStyle.Body2">Retrieve wallet and collection balances by currency.</RadzenText>
+                        <a href="/wallet">View balances →</a>
                     </RadzenStack>
                 </RadzenCard>
-
                 <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
                     <RadzenStack Gap="0.75rem">
                         <RadzenIcon Icon="send" Style="font-size: 2rem; color: var(--rz-primary);" />
-                        <RadzenText TextStyle="TextStyle.H6">Payouts</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Body2">
-                            Explore Mobile Money and bank payout initiation using supported providers.
-                        </RadzenText>
-                        <a href="/payouts">Explore payouts →</a>
+                        <RadzenText TextStyle="TextStyle.H6">Mobile Money Payout</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Select a supported withdrawal operator and send funds to a wallet.</RadzenText>
+                        <a href="/payouts/mobile-money">Explore Mobile Money payouts →</a>
                     </RadzenStack>
                 </RadzenCard>
-
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenIcon Icon="account_balance" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenText TextStyle="TextStyle.H6">Bank Payout</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Load supported banks, initiate payouts, and retrieve payout details.</RadzenText>
+                        <a href="/payouts/bank">Explore bank payouts →</a>
+                    </RadzenStack>
+                </RadzenCard>
                 <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
                     <RadzenStack Gap="0.75rem">
                         <RadzenIcon Icon="webhook" Style="font-size: 2rem; color: var(--rz-primary);" />
                         <RadzenText TextStyle="TextStyle.H6">Webhooks</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Body2">
-                            Validate webhook signatures and inspect accepted payment and payout events.
-                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Validate webhook signatures and inspect accepted payment and payout events.</RadzenText>
                         <a href="/webhooks">Explore webhooks →</a>
                     </RadzenStack>
                 </RadzenCard>
