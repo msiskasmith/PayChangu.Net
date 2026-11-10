@@ -1,0 +1,246 @@
+@page "/verify-transactions"
+@page "/transactions"
+
+<PageTitle>Verify Transactions | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">
+            Verify Transactions
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">
+            Verify a payment using its transaction reference or charge identifier.
+        </RadzenText>
+    </div>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <div>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Transaction identifier</RadzenText>
+                <RadzenTextBox @bind-Value="transactionIdentifier"
+                               Placeholder="Enter transaction reference or charge ID"
+                               Style="width: 100%" />
+            </div>
+
+            <RadzenRow Gap="1rem">
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Payment flow</RadzenText>
+                    <RadzenDropDown TValue="PayChanguPaymentFlow"
+                                    Data="@paymentFlows"
+                                    @bind-Value="selectedPaymentFlow"
+                                    Style="width: 100%" />
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Payment method</RadzenText>
+                    <RadzenDropDown TValue="PayChanguPaymentMethod"
+                                    Data="@paymentMethods"
+                                    @bind-Value="selectedPaymentMethod"
+                                    Style="width: 100%" />
+                </RadzenColumn>
+            </RadzenRow>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger">
+                    @errorMessage
+                </RadzenAlert>
+            }
+
+            <div>
+                <RadzenButton Text="Verify transaction"
+                              Icon="search"
+                              Click="@VerifyTransactionAsync"
+                              Disabled="@isLoading" />
+            </div>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (isLoading)
+    {
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.Body2">
+                Verifying transaction...
+            </RadzenText>
+        </RadzenCard>
+    }
+    else if (verification?.Result is { } data)
+    {
+        <RadzenCard>
+            <RadzenStack Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.H6">Verification result</RadzenText>
+                    <RadzenBadge Text="@data.Status"
+                                 BadgeStyle="@(string.Equals(data.Status, "success", StringComparison.OrdinalIgnoreCase)
+                                     ? BadgeStyle.Success
+                                     : BadgeStyle.Warning)" />
+                </RadzenStack>
+
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Subtitle2">Amount</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H5">
+                            @data.Currency @data.Amount.ToString("N2")
+                        </RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Subtitle2">Charges</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H5">
+                            @data.Currency @data.Charges?.Amount.ToString("N2")
+                        </RadzenText>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenText TextStyle="TextStyle.Subtitle2">Transaction details</RadzenText>
+                <RadzenRow Gap="0.5rem">
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Transaction identifier</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.TransactionIdentifier</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Provider reference</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.ProviderReference</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Payment flow</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.PaymentFlow</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Payment method</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.PaymentMethod</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Environment</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.Mode</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Attempts</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.Attempts</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Created</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@data.CreatedAt?.ToLocalTime().ToString("g")</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.Caption">Completed</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">@(data.CompletedAt?.ToLocalTime().ToString("g") ?? "—")</RadzenText>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                @if (data.Customer is not null)
+                {
+                    <hr/>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Customer</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        @($"{data.Customer.FirstName} {data.Customer.LastName}".Trim())
+                    </RadzenText>
+                    @if (!string.IsNullOrWhiteSpace(data.Customer.Email))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2">@data.Customer.Email</RadzenText>
+                    }
+                }
+
+                @if (data.Authorization is not null)
+                {
+                    <hr/>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Authorization</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        Channel: @data.Authorization.Channel
+                    </RadzenText>
+                    @if (!string.IsNullOrWhiteSpace(data.Authorization.CardNumber))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Card: @data.Authorization.CardNumber (@data.Authorization.Brand)
+                        </RadzenText>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(data.Authorization.MobileNumber))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Mobile number: @data.Authorization.MobileNumber
+                        </RadzenText>
+                    }
+                }
+
+                @if (data.Logs.Count > 0)
+                {
+                    <hr/>
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Activity logs</RadzenText>
+                    @foreach (var log in data.Logs)
+                    {
+                        <RadzenStack Gap="0.25rem">
+                            <RadzenText TextStyle="TextStyle.Body2">@log.Message</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption">
+                                @log.Type · @log.CreatedAt?.ToLocalTime().ToString("g")
+                            </RadzenText>
+                        </RadzenStack>
+                    }
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+
+    private readonly PayChanguPaymentFlow[] paymentFlows =
+    [
+        PayChanguPaymentFlow.Checkout,
+        PayChanguPaymentFlow.DirectCharge
+    ];
+
+    private readonly PayChanguPaymentMethod[] paymentMethods =
+    [
+        PayChanguPaymentMethod.MobileMoney,
+        PayChanguPaymentMethod.BankTransfer,
+        PayChanguPaymentMethod.Card
+    ];
+
+    private string transactionIdentifier = string.Empty;
+    private PayChanguPaymentFlow selectedPaymentFlow = PayChanguPaymentFlow.Checkout;
+    private PayChanguPaymentMethod selectedPaymentMethod = PayChanguPaymentMethod.MobileMoney;
+    private PayChanguApiResponse<VerifyPaymentResponse>? verification;
+    private string? errorMessage;
+    private bool isLoading;
+
+    private async Task VerifyTransactionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(transactionIdentifier))
+        {
+            errorMessage = "Enter a transaction reference or charge identifier.";
+            verification = null;
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        verification = null;
+
+        try
+        {
+            verification = await payChanguClient.Transactions.VerifyAsync(
+                transactionIdentifier.Trim(),
+                selectedPaymentFlow,
+                selectedPaymentMethod);
+
+            if (!verification.Success)
+            {
+                errorMessage = verification.ErrorMessage ??
+                    "PayChangu could not verify the transaction.";
+            }
+            else if (verification.Result is null)
+            {
+                errorMessage = "PayChangu returned no transaction details.";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to PayChangu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
