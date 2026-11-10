@@ -1,0 +1,74 @@
+@page "/direct-charge/card/refund"
+
+<PageTitle>Refund Card Charge | PayChangu.NET Sample</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Refund Card Charge</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">Submit a refund request for an existing Card Direct Charge.</RadzenText>
+    </div>
+    <RadzenAlert AlertStyle="AlertStyle.Warning">
+        This action submits a refund request to PayChangu. Only use it with a suitable test transaction.
+    </RadzenAlert>
+    <RadzenCard>
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.Subtitle2">Charge identifier</RadzenText>
+            <RadzenTextBox @bind-Value="chargeId" Placeholder="Enter card charge ID" Style="width: 100%" />
+            <RadzenButton Text="Refund card charge" Icon="undo" ButtonStyle="ButtonStyle.Danger"
+                          Click="@RefundAsync" Disabled="@isLoading" />
+            @if (isLoading)
+            {
+                <RadzenText>Submitting refund request...</RadzenText>
+            }
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <RadzenAlert AlertStyle="@(succeeded ? AlertStyle.Success : AlertStyle.Warning)">@message</RadzenAlert>
+            }
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    [Inject] IPayChanguClient payChanguClient { get; set; } = default!;
+    [SupplyParameterFromQuery(Name = "charge_id")]
+    public string? ChargeId { get; set; }
+    private string chargeId = string.Empty;
+    private string? message;
+    private bool succeeded;
+    private bool isLoading;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ChargeId)) chargeId = ChargeId;
+    }
+
+    private async Task RefundAsync()
+    {
+        message = null;
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            succeeded = false;
+            message = "Enter a charge identifier.";
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var response = await payChanguClient.DirectCharges.Card.RefundAsync(chargeId.Trim());
+            succeeded = response.Success;
+            message = response.Success
+                ? "The card refund request was accepted by PayChangu."
+                : response.ErrorMessage ?? "PayChangu could not process the card refund request.";
+        }
+        catch (HttpRequestException ex)
+        {
+            succeeded = false;
+            message = $"Unable to submit the refund request: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
