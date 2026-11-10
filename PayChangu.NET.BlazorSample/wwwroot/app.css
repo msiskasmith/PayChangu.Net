@@ -58,3 +58,195 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* PayChangu.NET sample application */
+:root {
+    --sample-page-bg: #f5f7fa;
+    --sample-surface: #ffffff;
+    --sample-border: #e4eaf0;
+    --sample-muted: #64748b;
+    --sample-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+}
+
+html, body {
+    min-height: 100%;
+    background: var(--sample-page-bg);
+    color: #172033;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+a, .btn-link {
+    color: var(--rz-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+a:hover, .btn-link:hover {
+    text-decoration: underline;
+}
+
+.sample-page {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0.35rem 0 2rem;
+}
+
+.sample-page-header {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.35rem;
+    padding: 1.45rem 1.6rem;
+    border: 1px solid var(--sample-border);
+    border-radius: 18px;
+    background: linear-gradient(115deg, #ffffff 0%, #f8fbfd 100%);
+    box-shadow: var(--sample-shadow);
+}
+
+.sample-page-header::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--rz-primary);
+    content: "";
+}
+
+.sample-page-header h1 {
+    margin: 0 0 0.45rem;
+    color: #172033;
+    font-size: clamp(1.35rem, 2.3vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+}
+
+.sample-page-header p {
+    max-width: 760px;
+    margin: 0;
+    color: var(--sample-muted);
+    line-height: 1.65;
+}
+
+.sample-page .rz-card {
+    border: 1px solid var(--sample-border);
+    border-radius: 16px;
+    background: var(--sample-surface);
+    box-shadow: var(--sample-shadow);
+}
+
+.sample-page .rz-card .rz-card {
+    box-shadow: none;
+}
+
+.sample-page .rz-button {
+    min-height: 2.55rem;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.sample-page .rz-button.rz-button-md {
+    padding-inline: 1.05rem;
+}
+
+.sample-page .rz-textbox,
+.sample-page .rz-numeric,
+.sample-page .rz-dropdown,
+.sample-page .rz-datepicker {
+    width: 100%;
+    border-radius: 10px;
+}
+
+.sample-page .rz-inputtext,
+.sample-page .rz-dropdown,
+.sample-page .rz-numeric input {
+    border-radius: 10px;
+}
+
+.sample-page .rz-alert {
+    border-radius: 12px;
+}
+
+.sample-page .rz-text-caption {
+    color: var(--sample-muted);
+    line-height: 1.5;
+}
+
+.sample-page hr {
+    border-color: var(--sample-border);
+    opacity: 1;
+}
+
+.sample-page pre {
+    border-radius: 10px;
+}
+
+.sample-page .rz-badge {
+    font-weight: 600;
+}
+
+.sample-page .rz-stack {
+    min-width: 0;
+}
+
+.sample-page .rz-row {
+    row-gap: 1rem;
+}
+
+.sample-page .rz-card .rz-card {
+    background: #fbfcfe;
+}
+
+@media (max-width: 640px) {
+    .sample-page {
+        padding-top: 0;
+    }
+
+    .sample-page-header {
+        padding: 1.15rem 1.15rem 1.15rem 1.35rem;
+        border-radius: 14px;
+    }
+}
+
+
+/* Overview cards */
+.sample-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+    gap: 1rem;
+}
+
+.sample-feature-card {
+    height: 100%;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.sample-feature-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--rz-primary) 35%, var(--sample-border));
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.sample-feature-card .rz-icon {
+    display: inline-flex;
+    width: 2.8rem;
+    height: 2.8rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--rz-primary) 10%, white);
+}
+
+.sample-feature-card .rz-text {
+    font-weight: 650;
+}
+
+.sample-feature-card a {
+    display: block;
+    padding-block: 0.1rem;
+    font-size: 0.9rem;
+}
+
+.sample-brand-icon {
+    color: var(--rz-primary);
+    font-size: 1.5rem;
+}
