@@ -1053,7 +1053,7 @@ The sample applications are maintained in a separate repository:
 
 [**PayChangu.NET.Samples**](https://github.com/msiskasmith/PayChangu.NET.Samples)
 
-The repository currently includes a Blazor Web App built with .NET 10 and Radzen components. It demonstrates how to integrate PayChangu.NET, including Standard Checkout, Direct Charge, payouts, transaction verification, wallet balance retrieval, and webhook handling.
+The repository currently includes a Blazor Web App built with .NET 11 and Radzen components. It demonstrates how to integrate PayChangu.NET, including Standard Checkout, Direct Charge, payouts, transaction verification, wallet balance retrieval, and webhook handling.
 
 See the [sample repository README](https://github.com/msiskasmith/PayChangu.NET.Samples#readme) for an overview, and the [Blazor sample README](https://github.com/msiskasmith/PayChangu.NET.Samples/blob/master/PayChangu.NET.Samples.Blazor/README.md) for configuration and run instructions.
 
