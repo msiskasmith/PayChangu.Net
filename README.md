@@ -1047,50 +1047,15 @@ if (!string.IsNullOrWhiteSpace(response.RawJsonResponse))
 
 `RawJsonResponse` is a raw response body, not a parsed or normalized object. It may be `null` when no response body is available. Use `Result` for normal SDK interactions, and use the raw JSON when you specifically need access to the original payload. Be mindful that API responses may contain customer or transaction information; avoid writing the raw payload to logs that are not appropriately protected.
 
-## Blazor Sample Application
+## Sample Applications
 
-The repository includes a Blazor Web App sample in `PayChangu.NET.BlazorSample/`. It uses Radzen components to demonstrate how to integrate PayChangu.NET into an application, including:
+The sample applications are maintained in a separate repository:
 
-- Standard Checkout.
-- Mobile Money, Bank Transfer, and Card Direct Charge (including 3-D Secure).
-- Mobile Money and bank payouts.
-- Transaction verification and wallet balance retrieval.
-- Webhook signature validation and a local webhook event viewer.
+[**PayChangu.NET.Samples**](https://github.com/msiskasmith/PayChangu.NET.Samples)
 
-The sample targets .NET 10.
+The repository currently includes a Blazor Web App built with .NET 10 and Radzen components. It demonstrates how to integrate PayChangu.NET, including Standard Checkout, Direct Charge, payouts, transaction verification, wallet balance retrieval, and webhook handling.
 
-### Configure the PayChangu secret before starting the sample
-
-**A PayChangu API secret key is required before the sample application can start.** The application checks for this setting at startup and stops with an error if it is missing.
-
-Open a terminal in the sample project directory:
-
-```bash
-cd PayChangu.NET.BlazorSample
-```
-
-Add your PayChangu secret key using .NET User Secrets:
-
-```bash
-dotnet user-secrets set "PayChangu:SecretKey" "<your-paychangu-secret-key>"
-```
-
-If you also want to test webhook signature validation, configure the webhook secret. This is separate from the API secret key and must match the secret configured for your webhook in PayChangu:
-
-```bash
-dotnet user-secrets set "PayChangu:WebhookSecret" "<your-webhook-secret>"
-```
-
-Then restore and start the sample:
-
-```bash
-dotnet restore
-dotnet run
-```
-
-Open the local URL printed in the terminal. For local webhook testing, the sample also includes an Overview guide explaining how to expose the application with ngrok and register the public webhook URL with PayChangu.
-
-Do not commit API keys, webhook secrets, or other credentials to source control.
+See the [sample repository README](https://github.com/msiskasmith/PayChangu.NET.Samples#readme) for an overview, and the [Blazor sample README](https://github.com/msiskasmith/PayChangu.NET.Samples/blob/master/PayChangu.NET.Samples.Blazor/README.md) for configuration and run instructions.
 
 ## License
 
