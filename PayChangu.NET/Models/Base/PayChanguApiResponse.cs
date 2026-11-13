@@ -8,7 +8,9 @@ namespace PayChangu.NET.Models.Base;
 public class PayChanguApiResponse
 {
     /// <summary>
-    /// Gets or sets a value indicating whether the API request was successful.
+    /// Gets or sets a value indicating whether the SDK successfully completed
+    /// the API request and deserialized the response. This does not indicate
+    /// whether the underlying transaction was successful.
     /// </summary>
     public bool Success { get; set; }
 
