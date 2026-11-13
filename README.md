@@ -1014,6 +1014,55 @@ switch (webhookEvent.PaymentFlow)
 
 **Important:** Signature validation confirms that the webhook payload was signed using the configured webhook secret. Your application should still process transaction statuses appropriately, verify payments where applicable, and avoid treating an initiation or pending notification as a completed transaction.
 
+## Transaction Status and API Response Success
+
+The SDK distinguishes between the success of an API operation and the outcome of a transaction.
+
+- `PayChanguApiResponse.Success` indicates that the SDK received a successful HTTP response and successfully deserialized the response body. It does not indicate that the payment itself succeeded.
+- `VerifyPaymentResponse.Status` represents the transaction outcome.
+
+The SDK exposes the common transaction status values through `PayChanguTransactionStatus`:
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `Pending` | `pending` | The transaction is awaiting completion. |
+| `Success` | `success` | The transaction completed successfully. |
+| `Failed` | `failed` | The transaction failed. |
+| `Refunded` | `refunded` | The transaction was refunded. |
+
+For example, a verification request can succeed even when the transaction has failed:
+
+```csharp
+using PayChangu.NET.Constants;
+
+var response = await _payChanguClient.Transactions.VerifyAsync(
+    transactionIdentifier,
+    PayChanguPaymentFlow.DirectCharge,
+    PayChanguPaymentMethod.MobileMoney,
+    cancellationToken);
+
+if (!response.Success || response.Result == null)
+{
+    // The API operation failed. Inspect ErrorMessage and StatusCode.
+    return;
+}
+
+if (response.Result.Status == PayChanguTransactionStatus.Success)
+{
+    // The payment completed successfully.
+}
+else if (response.Result.Status == PayChanguTransactionStatus.Pending)
+{
+    // The transaction is still pending.
+}
+else if (response.Result.Status == PayChanguTransactionStatus.Failed)
+{
+    // The transaction failed, although the verification request succeeded.
+}
+```
+
+These constants cover the common transaction statuses; the API may return additional values in the future. The original API response, including its envelope-level `status` and `message`, remains available in `RawJsonResponse`.
+
 ## Raw JSON Response
 
 Every `PayChanguApiResponse<T>` exposes a `RawJsonResponse` property containing the original JSON response body returned by PayChangu, as a string. This is provided alongside the strongly typed `Result` property; it does not replace or change the deserialized response model.
@@ -1040,7 +1089,7 @@ if (!string.IsNullOrWhiteSpace(response.RawJsonResponse))
 
     if (root.TryGetProperty("status", out var statusElement))
     {
-        var apiStatus = statusElement.GetString();
+        var envelopeStatus = statusElement.GetString();
     }
 }
 ```
