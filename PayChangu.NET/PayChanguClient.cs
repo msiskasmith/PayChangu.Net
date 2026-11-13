@@ -251,7 +251,6 @@ internal sealed class PayChanguClient : IPayChanguClient
                         }
 
                         var verification = MapDirectChargeVerificationResponse(
-                            response.Result!.Status,
                             response.Result.Message,
                             directChargeData,
                             transactionIdentifier,
@@ -298,7 +297,6 @@ internal sealed class PayChanguClient : IPayChanguClient
                         try
                         {
                             var verification = MapDirectChargeVerificationResponse(
-                                response.Result!.Status,
                                 response.Result.Message,
                                 transaction,
                                 transactionIdentifier,
@@ -1000,7 +998,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             Type = data.Type,
 
             Status = data.Status,
-            ApiStatus = response.Status,
             Message = response.Message,
 
             Attempts = data.NumberOfAttempts,
@@ -1066,14 +1063,12 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// Maps a PayChangu Direct Charge transaction to the normalized
     /// verification response model.
     /// </summary>
-    /// <param name="apiStatus">The status of the PayChangu API response.</param>
     /// <param name="message">The message returned by PayChangu.</param>
     /// <param name="transaction">The Direct Charge transaction details.</param>
     /// <param name="transactionIdentifier">The charge identifier used for verification.</param>
     /// <param name="paymentMethod">The payment method used for the transaction.</param>
     /// <returns>The normalized payment verification response.</returns>
     private static VerifyPaymentResponse MapDirectChargeVerificationResponse(
-        string apiStatus,
         string message,
         PayChanguTransaction transaction,
         string transactionIdentifier,
@@ -1095,7 +1090,6 @@ internal sealed class PayChanguClient : IPayChanguClient
             Type = transaction.Type,
 
             Status = transaction.Status,
-            ApiStatus = apiStatus,
             Message = message,
 
             Attempts = transaction.Attempts,

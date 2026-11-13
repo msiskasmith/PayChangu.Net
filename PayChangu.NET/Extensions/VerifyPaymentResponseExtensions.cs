@@ -1,4 +1,5 @@
-﻿using PayChangu.NET.Models;
+﻿using PayChangu.NET.Constants;
+using PayChangu.NET.Models;
 using System;
 
 /// <summary>
@@ -35,7 +36,7 @@ public static class VerifyPaymentResponseExtensions
         return
             string.Equals(
                 response.Status,
-                "success",
+                PayChanguTransactionStatus.Success,
                 StringComparison.OrdinalIgnoreCase) &&
             string.Equals(
                 response.TransactionIdentifier,

@@ -119,7 +119,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Hosted payment session generated successfully.",
             result.Result.Message);
@@ -285,8 +284,6 @@ public sealed class PayChanguClientTests
 
         Assert.Equal("26262633201", result.Result.ProviderReference);
         Assert.Equal("checkout.payment", result.Result.EventType);
-
-        Assert.Equal("success", result.Result.ApiStatus);
         Assert.Equal("success", result.Result.Status);
 
         Assert.Equal(1, result.Result.Attempts);
@@ -299,6 +296,57 @@ public sealed class PayChanguClientTests
 
         Assert.Equal("MASTERCARD", result.Result.Authorization!.Brand);
         Assert.Equal("customer@example.com", result.Result.Customer!.Email);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_Checkout_WhenTransactionFailed_StillReturnsSuccessfulApiResponse()
+    {
+        // Arrange
+        const string transactionReference = "TXN-FAILED";
+
+        const string json = """
+    {
+        "status": "failed",
+        "message": "Transaction failed.",
+        "data": {
+            "event_type": "checkout.payment",
+            "tx_ref": "TXN-FAILED",
+            "mode": "live",
+            "type": "API Payment (Checkout)",
+            "status": "failed",
+            "number_of_attempts": 1,
+            "currency": "MWK",
+            "amount": 1000,
+            "charges": 0,
+            "logs": []
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.Transactions.VerifyAsync(
+            transactionReference,
+            PayChanguPaymentFlow.Checkout,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+        Assert.Equal("failed", result.Result.Status);
+        Assert.Equal("Transaction failed.", result.Result.Message);
     }
 
     [Fact]
@@ -601,8 +649,6 @@ public sealed class PayChanguClientTests
         Assert.Equal("ref-001", result.Result.TransactionReference);
         Assert.Equal("trans-001", result.Result.TransactionId);
         Assert.Equal("trace-001", result.Result.TraceId);
-
-        Assert.Equal("success", result.Result.ApiStatus);
         Assert.Equal("success", result.Result.Status);
 
         Assert.Equal(5000m, result.Result.Amount);
@@ -690,7 +736,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(responseContent, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Supported mobile money operators retrieved successfully.",
             result.Result.Message);
@@ -876,8 +921,6 @@ public sealed class PayChanguClientTests
         Assert.Null(result.ErrorMessage);
 
         Assert.NotNull(result.Result);
-
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Payment request initiated successfully.",
             result.Result.Message);
@@ -1057,8 +1100,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Transaction retrieved successfully.",
             result.Result.Message);
@@ -1429,8 +1470,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(chargeId, result.Result.TransactionIdentifier);
         Assert.Equal("bank-ref-001", result.Result.TransactionReference);
         Assert.Equal("bank-trans-001", result.Result.TransactionId);
-
-        Assert.Equal("success", result.Result.ApiStatus);
         Assert.Equal("success", result.Result.Status);
 
         Assert.Equal(10000m, result.Result.Amount);
@@ -1546,8 +1585,6 @@ public sealed class PayChanguClientTests
         Assert.Null(result.ErrorMessage);
 
         Assert.NotNull(result.Result);
-
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Payment initialized successfully.",
             result.Result.Message);
@@ -2635,8 +2672,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(chargeId, result.Result.TransactionReference);
         Assert.Equal("card-ref-001", result.Result.ProviderReference);
         Assert.Equal("api.charge", result.Result.EventType);
-
-        Assert.Equal("success", result.Result.ApiStatus);
         Assert.Equal("success", result.Result.Status);
 
         Assert.Equal(1, result.Result.Attempts);
@@ -2764,7 +2799,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal("Payout processed successfully.", result.Result.Message);
 
         var transaction = result.Result.Data.Transaction;
@@ -3110,7 +3144,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Payout request submitted successfully.",
             result.Result.Message);
@@ -3199,8 +3232,6 @@ public sealed class PayChanguClientTests
         Assert.Null(result.ErrorMessage);
 
         Assert.NotNull(result.Result);
-
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Wallet balances retrieved successfully",
             result.Result.Message);
@@ -3455,7 +3486,6 @@ public sealed class PayChanguClientTests
         Assert.NotNull(response.Result);
         Assert.NotNull(response.RawJsonResponse);
 
-        Assert.Equal("success", response.Result.Status);
         Assert.Equal("Retrieved successfully.", response.Result.Message);
 
         Assert.NotNull(response.Result.Data);
@@ -3599,7 +3629,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-        Assert.Equal("successful", result.Result.Status);
         Assert.Equal(
             "Transaction details retrieved successfully",
             result.Result.Message);
@@ -3880,7 +3909,6 @@ public sealed class PayChanguClientTests
         Assert.Equal(json, result.RawJsonResponse);
 
         Assert.NotNull(result.Result);
-        Assert.Equal("success", result.Result.Status);
         Assert.Equal(
             "Transactions retrieved successfully.",
             result.Result.Message);
