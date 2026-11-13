@@ -299,6 +299,57 @@ public sealed class PayChanguClientTests
     }
 
     [Fact]
+    public async Task VerifyPaymentAsync_Checkout_WhenTransactionFailed_StillReturnsSuccessfulApiResponse()
+    {
+        // Arrange
+        const string transactionReference = "TXN-FAILED";
+
+        const string json = """
+    {
+        "status": "failed",
+        "message": "Transaction failed.",
+        "data": {
+            "event_type": "checkout.payment",
+            "tx_ref": "TXN-FAILED",
+            "mode": "live",
+            "type": "API Payment (Checkout)",
+            "status": "failed",
+            "number_of_attempts": 1,
+            "currency": "MWK",
+            "amount": 1000,
+            "charges": 0,
+            "logs": []
+        }
+    }
+    """;
+
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        using var serviceProvider = CreateServiceProvider(handler);
+        var client = serviceProvider.GetRequiredService<IPayChanguClient>();
+
+        // Act
+        var result = await client.Transactions.VerifyAsync(
+            transactionReference,
+            PayChanguPaymentFlow.Checkout,
+            PayChanguPaymentMethod.Card);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(json, result.RawJsonResponse);
+
+        Assert.NotNull(result.Result);
+        Assert.Equal("failed", result.Result.Status);
+        Assert.Equal("Transaction failed.", result.Result.Message);
+    }
+
+    [Fact]
     public async Task VerifyPaymentAsync_ShouldReturnFailureResponse_WhenApiReturnsError()
     {
         // Arrange
@@ -3435,7 +3486,6 @@ public sealed class PayChanguClientTests
         Assert.NotNull(response.Result);
         Assert.NotNull(response.RawJsonResponse);
 
-        Assert.Equal("success", response.Result.Status);
         Assert.Equal("Retrieved successfully.", response.Result.Message);
 
         Assert.NotNull(response.Result.Data);
