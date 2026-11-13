@@ -251,7 +251,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                         }
 
                         var verification = MapDirectChargeVerificationResponse(
-                            response.Result.Message,
+                            response.Result?.Message,
                             directChargeData,
                             transactionIdentifier,
                             paymentMethod);
@@ -297,7 +297,7 @@ internal sealed class PayChanguClient : IPayChanguClient
                         try
                         {
                             var verification = MapDirectChargeVerificationResponse(
-                                response.Result.Message,
+                                response.Result?.Message,
                                 transaction,
                                 transactionIdentifier,
                                 paymentMethod);
@@ -1069,7 +1069,7 @@ internal sealed class PayChanguClient : IPayChanguClient
     /// <param name="paymentMethod">The payment method used for the transaction.</param>
     /// <returns>The normalized payment verification response.</returns>
     private static VerifyPaymentResponse MapDirectChargeVerificationResponse(
-        string message,
+        string? message,
         PayChanguTransaction transaction,
         string transactionIdentifier,
         PayChanguPaymentMethod paymentMethod)

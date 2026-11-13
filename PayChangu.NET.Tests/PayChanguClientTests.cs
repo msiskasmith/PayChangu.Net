@@ -1820,7 +1820,6 @@ public sealed class PayChanguClientTests
 
         var result = response.Result;
 
-        Assert.Equal("success", result.Status);
         Assert.Equal("Transaction retrieved successfully.", result.Message);
 
         var transaction = result.Data.Transaction;

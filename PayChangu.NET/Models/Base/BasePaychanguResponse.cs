@@ -1,4 +1,6 @@
-﻿namespace PayChangu.NET.Models.Base;
+﻿using System.Text.Json.Serialization;
+
+namespace PayChangu.NET.Models.Base;
 
 /// <summary>
 /// Represents a base class for most paychangu responses.
@@ -9,5 +11,5 @@ public class BasePaychanguResponse
     /// Gets or sets the response message.
     /// </summary>
     [JsonPropertyName("message")]
-    public string Message { get; set; } = null!;
+    public string? Message { get; set; } = null!;
 }
