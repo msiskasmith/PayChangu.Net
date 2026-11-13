@@ -73,9 +73,9 @@ public sealed class VerifyPaymentResponse : BasePaychanguResponse
     public string? Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the status returned by the PayChangu verification API.
+    /// Gets or sets the transaction status.
     /// </summary>
-    public string ApiStatus { get; set; } = null!;
+    public string Status { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the total number of payment attempts, when available.
