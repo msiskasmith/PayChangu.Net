@@ -13,7 +13,6 @@ public sealed class VerifyPaymentResponseExtensionsTests
         return new VerifyPaymentResponse
         {
             Status = "success",
-            ApiStatus = "success",
             TransactionIdentifier = ExpectedTransactionIdentifier,
             Currency = ExpectedCurrency,
             Amount = ExpectedAmount
@@ -144,11 +143,10 @@ public sealed class VerifyPaymentResponseExtensionsTests
     }
 
     [Fact]
-    public void IsValid_WhenApiStatusIsSuccessButTransactionStatusIsFailed_ReturnsFalse()
+    public void IsValid_WhenTransactionStatusIsFailed_ReturnsFalse()
     {
         // Arrange
         var response = CreateResponse();
-        response.ApiStatus = "success";
         response.Status = "failed";
 
         // Act
